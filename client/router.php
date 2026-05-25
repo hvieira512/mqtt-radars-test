@@ -10,6 +10,8 @@ $routes = [
     '/modulos/radares/_ajax/radar-data/ingest.php'          => '/_ajax/radar-data/ingest.php',
     '/modulos/radares/_ajax/radar-data/ingest-profiler.php' => '/_ajax/radar-data/ingest-profiler.php',
     '/modulos/radares/_ajax/radar-data/stats.php'           => '/_ajax/radar-data/stats.php',
+    '/modulos/radares/_ajax/radar-data/rooms-html.php'      => '/_ajax/radar-data/rooms-html.php',
+    '/modulos/radares/monitorizacao.php'                    => '/monitorizacao.php',
     '/modulos/radares/_ajax/layouts/current.php'            => '/_ajax/layouts/current.php',
     '/modulos/radares/_ajax/layouts/read.php'               => '/_ajax/layouts/read.php',
     '/modulos/radares/_ajax/layouts/sync.php'               => '/_ajax/layouts/sync.php',
@@ -33,6 +35,7 @@ $suffixMap = [
     'layouts/read.php'               => '/_ajax/layouts/read.php',
     'layouts/sync.php'               => '/_ajax/layouts/sync.php',
     'detections/device-table.php'    => '/_ajax/detections/device-table.php',
+    'radar-data/rooms-html.php'      => '/_ajax/radar-data/rooms-html.php',
 ];
 
 foreach ($suffixMap as $suffix => $target) {

@@ -174,13 +174,13 @@ export function initModal() {
 export async function init() {
     // Load Konva + AMCharts early (removed from blocking HTML, loaded async now)
     await Promise.all([
-        loadScript('https://unpkg.com/konva@9/konva.min.js'),
-        loadScript('https://cdn.amcharts.com/lib/5/index.js'),
+        loadScript("https://unpkg.com/konva@9/konva.min.js"),
+        loadScript("https://cdn.amcharts.com/lib/5/index.js"),
     ]);
     await Promise.all([
-        loadScript('https://cdn.amcharts.com/lib/5/xy.js'),
-        loadScript('https://cdn.amcharts.com/lib/5/percent.js'),
-        loadScript('https://cdn.amcharts.com/lib/5/themes/Animated.js'),
+        loadScript("https://cdn.amcharts.com/lib/5/xy.js"),
+        loadScript("https://cdn.amcharts.com/lib/5/percent.js"),
+        loadScript("https://cdn.amcharts.com/lib/5/themes/Animated.js"),
     ]);
 
     runInitStep("modal", initModal);
