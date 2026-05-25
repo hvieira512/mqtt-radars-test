@@ -127,7 +127,12 @@ function processSingleMessage($db, array $msg, array &$context, bool $manageOwnT
                     $positionRepo->insertPosition($eventId, $parsed['people']);
                     $positionRepo->upsertCurrentPositions($deviceId, $eventId, $parsed['people']);
 
+                    $alarmStart = microtime(true);
                     $allAlarms = AlarmEngine::evaluate($parsed);
+                    $alarmDuration = microtime(true) - $alarmStart;
+                    if ($alarmDuration > 0.005) {
+                        error_log("AlarmEngine[position] {$deviceCode} took " . round($alarmDuration * 1000, 2) . "ms");
+                    }
 
                     foreach ($allAlarms as $idx => $alarm) {
                         if (($alarm['alarm_type'] ?? '') === 'fall_confirmed') {
@@ -148,7 +153,12 @@ function processSingleMessage($db, array $msg, array &$context, bool $manageOwnT
                     }
                     $eventId = $eventRepo->createEvent($deviceId, 3);
                     $vitalsRepo->insertVitals($eventId, $parsed);
+                    $alarmStart = microtime(true);
                     $allAlarms = AlarmEngine::evaluate($parsed);
+                    $alarmDuration = microtime(true) - $alarmStart;
+                    if ($alarmDuration > 0.005) {
+                        error_log("AlarmEngine[heartbreath] {$deviceCode} took " . round($alarmDuration * 1000, 2) . "ms");
+                    }
                 }
                 break;
 
@@ -162,6 +172,7 @@ function processSingleMessage($db, array $msg, array &$context, bool $manageOwnT
         }
 
         $fallConfirmedRoomName = null;
+        $detectionRows = [];
 
         foreach ($allAlarms as $alarm) {
             if (($alarm['category'] ?? '') !== 'alarm') continue;
@@ -186,7 +197,7 @@ function processSingleMessage($db, array $msg, array &$context, bool $manageOwnT
                 }
             }
 
-            $detectionRepo->insertDetection([
+            $detectionRows[] = [
                 'event_id' => $eventId,
                 'device_id' => $deviceId,
                 'category' => $alarm['category'],
@@ -196,7 +207,11 @@ function processSingleMessage($db, array $msg, array &$context, bool $manageOwnT
                 'person_index' => $alarm['person_index'] ?? null,
                 'region_id' => $alarm['region_id'] ?? null,
                 'message' => $alarm['message'] ?? '',
-            ]);
+            ];
+        }
+
+        if ($detectionRows) {
+            $detectionRepo->insertDetections($detectionRows);
         }
 
         if ($manageOwnTransaction && $transactionStarted) {
