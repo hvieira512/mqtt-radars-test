@@ -8,7 +8,7 @@
  *
  * Total: ~500 position + ~167 vitals = ~667 msg/s
  *
- * Usage: php simulate-radars.php [--count=500] [--license=9999] [--vitals-only]
+ * Usage: php simulate-radars.php [--count=500] [--license=9999] [--vitals-only] [--no-falls]
  */
 
 error_reporting(E_ALL & ~E_DEPRECATED);
@@ -16,18 +16,20 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/bootstrap.php';
 
-$options = getopt('', ['count:', 'license:', 'vitals-only', 'help']);
+$options = getopt('', ['count:', 'license:', 'vitals-only', 'no-falls', 'help']);
 if (isset($options['help'])) {
     echo "Usage: php simulate-radars.php [options]\n";
     echo "  --count=N     Number of radars to simulate (default: 500)\n";
     echo "  --license=N   License ID to use (default: 9999)\n";
     echo "  --vitals-only Only send heartbreath data\n";
+    echo "  --no-falls    Do not generate fall confirmation postures\n";
     exit(0);
 }
 
 $radarCount = isset($options['count']) ? (int)$options['count'] : 500;
 $license = isset($options['license']) ? (int)$options['license'] : 9999;
 $vitalsOnly = isset($options['vitals-only']);
+$noFalls = isset($options['no-falls']);
 $radarCount = max(1, min(5000, $radarCount));
 
 // ─── MQTT helpers ──────────────────────────────────────────
@@ -69,6 +71,9 @@ function buildPublishPacket(string $topic, string $payload, int $qos = 0): strin
 // ─── Sim data generators ───────────────────────────────────
 
 $postures = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+if ($noFalls) {
+    $postures = array_values(array_filter($postures, fn($p) => $p !== 5));
+}
 $events = [0, 1, 2, 3, 4];
 $sleepStates = [0b00, 0b01, 0b10, 0b11];
 
@@ -182,6 +187,7 @@ $maxSendPerSecond = 1000;
 
 echo "Starting simulation: $radarCount radars, license $license\n";
 if ($vitalsOnly) echo "[vitals-only mode]\n";
+if ($noFalls) echo "[no-falls mode]\n";
 echo str_repeat('-', 60) . "\n";
 
 while (true) {

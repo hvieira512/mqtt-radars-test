@@ -132,7 +132,7 @@ services:
     container_name: test-radar-simulator
     restart: unless-stopped
     working_dir: /app/server
-    command: php /app/server/simulate-radars.php --count=500 --license=9999
+    command: php /app/server/simulate-radars.php --count=500 --license=9999 --no-falls
     volumes:
       - ./:/app
     environment:
