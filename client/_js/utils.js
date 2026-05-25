@@ -1,6 +1,7 @@
 export {
     animateNumber,
     ensureNestedModalBackdrop,
+    loadScript,
     removeLoading,
     removeNestedModalBackdrop,
     renderLoading,

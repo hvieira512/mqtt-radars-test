@@ -1,4 +1,4 @@
-import { removeLoading as coreRemoveLoading, renderLoading as coreRenderLoading } from "./core/utils.js";
+import { removeLoading as coreRemoveLoading, renderLoading as coreRenderLoading, loadScript as coreLoadScript } from "./core/utils.js";
 
 export function animateNumber({
     from = 0,
@@ -72,4 +72,8 @@ export function renderLoading(container) {
 
 export function removeLoading(container) {
     coreRemoveLoading(container);
+}
+
+export function loadScript(url) {
+    return coreLoadScript(url);
 }
