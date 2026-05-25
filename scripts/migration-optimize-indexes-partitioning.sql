@@ -4,11 +4,15 @@
 
 USE radar_test;
 
--- ─── 1. Remove unused indexes ──────────────────────────────
+-- ─── 1. Remove unused / redundant indexes ──────────────────
 -- These indexes are never used by application queries.
 -- Each secondary index adds write overhead on every INSERT.
+-- idx_eventos_dispositivo is redundant: composite index
+-- idx_eventos_device_type_time starts with dispositivo_id
+-- and covers all queries that filter by dispositivo_id.
 
 DROP INDEX idx_eventos_tipo ON radares_eventos;
+DROP INDEX idx_eventos_dispositivo ON radares_eventos;
 DROP INDEX idx_estado_evento ON radares_estado_pessoas;
 DROP INDEX idx_estado_atualizado ON radares_estado_pessoas;
 DROP INDEX idx_det_evento ON radares_detecoes;

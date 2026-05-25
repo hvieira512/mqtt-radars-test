@@ -11,18 +11,38 @@ class VitalsRepository
 
     public function insertVitals(int $eventId, array $data): void
     {
+        $this->insertVitalsBatch([[
+            'event_id' => $eventId,
+            'breathing' => (int)$data['breathing'],
+            'heart_rate' => (int)$data['heart_rate'],
+            'sleep_state' => (string)$data['sleep_state'],
+        ]]);
+    }
+
+    public function insertVitalsBatch(array $vitalsRows): void
+    {
+        if (!$vitalsRows) {
+            return;
+        }
+
+        $values = [];
+        foreach ($vitalsRows as $r) {
+            $values[] = sprintf(
+                '(%d,%d,%d,%s)',
+                (int)$r['event_id'],
+                (int)$r['breathing'],
+                (int)$r['heart_rate'],
+                "'" . $this->db->sanitize($r['sleep_state']) . "'"
+            );
+        }
+
         $result = $this->db->execute(
             "INSERT INTO radares_sinais_vitais (evento_id, taxa_respiracao, ritmo_cardiaco, estado_sono)
-             VALUES (
-                " . (int)$eventId . ",
-                " . (int)$data['breathing'] . ",
-                " . (int)$data['heart_rate'] . ",
-                '" . $this->db->sanitize((string)$data['sleep_state']) . "'
-             )"
+             VALUES " . implode(',', $values)
         );
 
         if ($result === false) {
-            throw new RuntimeException('Failed to insert radar vitals.');
+            throw new RuntimeException('Failed to insert vitals.');
         }
     }
 

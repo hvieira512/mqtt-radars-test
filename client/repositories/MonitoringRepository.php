@@ -20,16 +20,11 @@ class MonitoringRepository
     public function listOnlineDeviceUids(int $seconds = 180): array
     {
         $rows = $this->db->getAll("
-            SELECT DISTINCT r.uid
-            FROM radares_esquema resq
-            INNER JOIN radares r ON r.id = resq.id_radar
-            WHERE EXISTS (
-                SELECT 1
-                FROM radares_eventos re
-                WHERE re.dispositivo_id = r.id
-                  AND re.recebido_em >= DATE_SUB(NOW(), INTERVAL " . (int)$seconds . " SECOND)
-                LIMIT 1
-            )
+            SELECT r.uid
+            FROM radares_ultimo_evento ue
+            INNER JOIN radares r ON r.id = ue.dispositivo_id
+            INNER JOIN radares_esquema resq ON resq.id_radar = r.id
+            WHERE ue.ultimo_recebido_em >= DATE_SUB(NOW(), INTERVAL " . (int)$seconds . " SECOND)
         ");
 
         $devices = [];

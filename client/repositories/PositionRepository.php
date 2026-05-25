@@ -11,23 +11,42 @@ class PositionRepository
 
     public function insertPosition(int $eventId, array $people): void
     {
-        if (!$people) {
+        $rows = [];
+        foreach ($people as $p) {
+            $rows[] = [
+                'event_id' => $eventId,
+                'person_index' => (int)$p['person_index'],
+                'x_position_dm' => (int)$p['x_position_dm'],
+                'y_position_dm' => (int)$p['y_position_dm'],
+                'z_position_cm' => (int)$p['z_position_cm'],
+                'time_left_s' => (int)$p['time_left_s'],
+                'posture_state' => $p['posture_state'] ?? '',
+                'last_event' => $p['last_event'] ?? '',
+                'region_id' => (int)($p['region_id'] ?? 0),
+            ];
+        }
+        $this->insertPositions($rows);
+    }
+
+    public function insertPositions(array $positionRows): void
+    {
+        if (!$positionRows) {
             return;
         }
 
         $values = [];
-        foreach ($people as $p) {
+        foreach ($positionRows as $r) {
             $values[] = sprintf(
                 '(%d,%d,%d,%d,%d,%d,%s,%s,%d)',
-                $eventId,
-                (int)$p['person_index'],
-                (int)$p['x_position_dm'],
-                (int)$p['y_position_dm'],
-                (int)$p['z_position_cm'],
-                (int)$p['time_left_s'],
-                $this->sqlString($p['posture_state'] ?? ''),
-                $this->sqlString($p['last_event'] ?? ''),
-                (int)($p['region_id'] ?? 0)
+                (int)$r['event_id'],
+                (int)$r['person_index'],
+                (int)$r['x_position_dm'],
+                (int)$r['y_position_dm'],
+                (int)$r['z_position_cm'],
+                (int)$r['time_left_s'],
+                $this->sqlString($r['posture_state']),
+                $this->sqlString($r['last_event']),
+                (int)$r['region_id']
             );
         }
 
@@ -44,24 +63,45 @@ class PositionRepository
 
     public function upsertCurrentPositions(int $deviceId, int $eventId, array $people): void
     {
-        if (!$people) {
+        $rows = [];
+        foreach ($people as $p) {
+            $rows[] = [
+                'device_id' => $deviceId,
+                'event_id' => $eventId,
+                'person_index' => (int)$p['person_index'],
+                'x_position_dm' => (int)$p['x_position_dm'],
+                'y_position_dm' => (int)$p['y_position_dm'],
+                'z_position_cm' => (int)$p['z_position_cm'],
+                'time_left_s' => (int)$p['time_left_s'],
+                'posture_state' => $p['posture_state'] ?? '',
+                'last_event' => $p['last_event'] ?? '',
+                'region_id' => (int)($p['region_id'] ?? 0),
+            ];
+        }
+        $this->upsertCurrentPositionsBatch($rows);
+    }
+
+    public function upsertCurrentPositionsBatch(array $upsertRows): void
+    {
+        if (!$upsertRows) {
             return;
         }
 
         $values = [];
-        foreach ($people as $p) {
-            $values[] = sprintf(
+        foreach ($upsertRows as $r) {
+            $key = (int)$r['device_id'] . '_' . (int)$r['person_index'];
+            $values[$key] = sprintf(
                 '(%d,%d,%d,%d,%d,%d,%d,%s,%s,%d,NOW())',
-                $deviceId,
-                (int)$p['person_index'],
-                $eventId,
-                (int)$p['x_position_dm'],
-                (int)$p['y_position_dm'],
-                (int)$p['z_position_cm'],
-                (int)$p['time_left_s'],
-                $this->sqlString($p['posture_state'] ?? ''),
-                $this->sqlString($p['last_event'] ?? ''),
-                (int)($p['region_id'] ?? 0)
+                (int)$r['device_id'],
+                (int)$r['person_index'],
+                (int)$r['event_id'],
+                (int)$r['x_position_dm'],
+                (int)$r['y_position_dm'],
+                (int)$r['z_position_cm'],
+                (int)$r['time_left_s'],
+                $this->sqlString($r['posture_state']),
+                $this->sqlString($r['last_event']),
+                (int)$r['region_id']
             );
         }
 

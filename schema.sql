@@ -104,7 +104,6 @@ CREATE TABLE IF NOT EXISTS radares_eventos (
     tipo_evento_id int(11) NOT NULL,
     recebido_em datetime NOT NULL DEFAULT current_timestamp(),
     PRIMARY KEY (id, recebido_em),
-    KEY idx_eventos_dispositivo (dispositivo_id),
     KEY idx_eventos_device_type_time (dispositivo_id, tipo_evento_id, recebido_em, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 PARTITION BY RANGE (TO_DAYS(recebido_em)) (
@@ -196,6 +195,14 @@ CREATE TABLE IF NOT EXISTS radares_estatisticas_sono (
     PRIMARY KEY (evento_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- ─── radares_ultimo_evento ────────────────────────────────
+CREATE TABLE IF NOT EXISTS radares_ultimo_evento (
+    dispositivo_id int NOT NULL PRIMARY KEY,
+    ultimo_recebido_em datetime NOT NULL,
+    criado_em timestamp NOT NULL DEFAULT current_timestamp(),
+    atualizado_em timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- ─── radares_detecoes ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS radares_detecoes (
     id bigint(20) NOT NULL AUTO_INCREMENT,
@@ -224,6 +231,7 @@ CREATE TABLE IF NOT EXISTS radares_detecoes (
 -- ═══════════════════════════════════════════════════════════
 
 SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE radares_ultimo_evento;
 TRUNCATE TABLE radares_detecoes;
 TRUNCATE TABLE radares_estatisticas_sono;
 TRUNCATE TABLE radares_estatisticas_minuto;

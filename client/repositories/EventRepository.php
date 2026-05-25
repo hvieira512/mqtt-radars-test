@@ -11,17 +11,37 @@ class EventRepository
 
     public function createEvent(int $deviceId, int $eventTypeId): int
     {
-        $result = $this->db->execute(
-            "INSERT INTO radares_eventos (dispositivo_id, tipo_evento_id)
-             VALUES (" . (int)$deviceId . ", " . (int)$eventTypeId . ")"
-        );
+        $ids = $this->createEvents([['device_id' => $deviceId, 'event_type_id' => $eventTypeId]]);
+        return $ids[0];
+    }
 
-        $eventId = (int)$this->db->getLastInsertedId();
-        if ($result === false || $eventId <= 0) {
-            throw new RuntimeException('Failed to create radar event.');
+    public function createEvents(array $events): array
+    {
+        if (!$events) {
+            return [];
         }
 
-        return $eventId;
+        $values = [];
+        foreach ($events as $ev) {
+            $values[] = '(' . (int)$ev['device_id'] . ', ' . (int)$ev['event_type_id'] . ')';
+        }
+
+        $result = $this->db->execute(
+            "INSERT INTO radares_eventos (dispositivo_id, tipo_evento_id)
+             VALUES " . implode(',', $values)
+        );
+
+        if ($result === false) {
+            throw new RuntimeException('Failed to create radar events.');
+        }
+
+        $firstId = $this->db->getLastInsertedId();
+        $ids = [];
+        for ($i = 0; $i < count($events); $i++) {
+            $ids[] = $firstId + $i;
+        }
+
+        return $ids;
     }
 
     public function getLatestEventId(): int
