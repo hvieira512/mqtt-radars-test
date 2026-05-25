@@ -34,15 +34,57 @@ function sendFallAlarmNotification(int $detectionId, string $roomName): void
 {
 }
 
-function processSingleMessage($db, array $msg, bool $manageOwnTransaction = true): array
+function extractDeviceCodes(array $messages): array
+{
+    $codes = [];
+    foreach ($messages as $msg) {
+        $payload = $msg['payload'] ?? [];
+        $deviceCode = trim((string)($payload['deviceCode'] ?? ''));
+        if ($deviceCode === '') {
+            continue;
+        }
+        $codes[$deviceCode] = true;
+    }
+
+    return array_keys($codes);
+}
+
+function buildBatchContext($db, array $messages): array
 {
     $deviceRepo = new DeviceRepository($db);
-    $eventRepo = new EventRepository($db);
+
+    $deviceCodes = extractDeviceCodes($messages);
+    $deviceIdsByCode = $deviceRepo->getDeviceIdsByUids($deviceCodes);
+    $fallRoomByDeviceId = $deviceRepo->getFallConfirmedRoomNamesByDeviceIds(array_values($deviceIdsByCode));
+
+    return [
+        'deviceRepo' => $deviceRepo,
+        'eventRepo' => new EventRepository($db),
+        'positionRepo' => new PositionRepository($db),
+        'vitalsRepo' => new VitalsRepository($db),
+        'detectionRepo' => new DetectionRepository($db),
+        'deviceIdsByCode' => $deviceIdsByCode,
+        'fallRoomByDeviceId' => $fallRoomByDeviceId,
+    ];
+}
+
+function processSingleMessage($db, array $msg, array &$context, bool $manageOwnTransaction = true): array
+{
+    /** @var DeviceRepository $deviceRepo */
+    $deviceRepo = $context['deviceRepo'];
+    /** @var EventRepository $eventRepo */
+    $eventRepo = $context['eventRepo'];
+    /** @var PositionRepository $positionRepo */
+    $positionRepo = $context['positionRepo'];
+    /** @var VitalsRepository $vitalsRepo */
+    $vitalsRepo = $context['vitalsRepo'];
+    /** @var DetectionRepository $detectionRepo */
+    $detectionRepo = $context['detectionRepo'];
 
     $payload = $msg['payload'] ?? [];
-    $deviceCode = $payload['deviceCode'] ?? null;
+    $deviceCode = trim((string)($payload['deviceCode'] ?? ''));
 
-    if (!$deviceCode) {
+    if ($deviceCode === '') {
         return ['status' => 'error', 'message' => 'No deviceCode'];
     }
 
@@ -56,14 +98,17 @@ function processSingleMessage($db, array $msg, bool $manageOwnTransaction = true
     $eventId = null;
 
     try {
-        $deviceId = $deviceRepo->getDeviceId($deviceCode);
+        $deviceId = $context['deviceIdsByCode'][$deviceCode] ?? null;
+        if ($deviceId === null) {
+            $deviceId = $deviceRepo->getDeviceId($deviceCode);
+            $context['deviceIdsByCode'][$deviceCode] = $deviceId;
+        }
 
         switch ($messageType) {
             case 'position':
                 $parser = new PositionParser();
                 $parsed = $parser->parse($payload['position'], $deviceCode);
                 if ($parsed) {
-                    $positionRepo = new PositionRepository($db);
                     $fallPersonIndexes = [];
                     foreach ($parsed['people'] as $person) {
                         if (($person['posture_state'] ?? '') === 'Fall Confirmation') {
@@ -82,7 +127,12 @@ function processSingleMessage($db, array $msg, bool $manageOwnTransaction = true
                     $positionRepo->insertPosition($eventId, $parsed['people']);
                     $positionRepo->upsertCurrentPositions($deviceId, $eventId, $parsed['people']);
 
+                    $alarmStart = microtime(true);
                     $allAlarms = AlarmEngine::evaluate($parsed);
+                    $alarmDuration = microtime(true) - $alarmStart;
+                    if ($alarmDuration > 0.005) {
+                        error_log("AlarmEngine[position] {$deviceCode} took " . round($alarmDuration * 1000, 2) . "ms");
+                    }
 
                     foreach ($allAlarms as $idx => $alarm) {
                         if (($alarm['alarm_type'] ?? '') === 'fall_confirmed') {
@@ -97,14 +147,18 @@ function processSingleMessage($db, array $msg, bool $manageOwnTransaction = true
                 $parser = new HeartBreathParser();
                 $parsed = $parser->parse($payload['heartbreath'], $deviceCode);
                 if ($parsed) {
-                    $vitalsRepo = new VitalsRepository($db);
                     if ($manageOwnTransaction && !$transactionStarted) {
                         $db->execute('START TRANSACTION');
                         $transactionStarted = true;
                     }
                     $eventId = $eventRepo->createEvent($deviceId, 3);
                     $vitalsRepo->insertVitals($eventId, $parsed);
+                    $alarmStart = microtime(true);
                     $allAlarms = AlarmEngine::evaluate($parsed);
+                    $alarmDuration = microtime(true) - $alarmStart;
+                    if ($alarmDuration > 0.005) {
+                        error_log("AlarmEngine[heartbreath] {$deviceCode} took " . round($alarmDuration * 1000, 2) . "ms");
+                    }
                 }
                 break;
 
@@ -117,8 +171,8 @@ function processSingleMessage($db, array $msg, bool $manageOwnTransaction = true
             return ['status' => 'error', 'message' => 'No event created', 'device' => $deviceCode];
         }
 
-        $detectionRepo = null;
         $fallConfirmedRoomName = null;
+        $detectionRows = [];
 
         foreach ($allAlarms as $alarm) {
             if (($alarm['category'] ?? '') !== 'alarm') continue;
@@ -131,18 +185,19 @@ function processSingleMessage($db, array $msg, bool $manageOwnTransaction = true
                     continue;
                 }
                 if ($fallConfirmedRoomName === null) {
-                    $fallConfirmedRoomName = $deviceRepo->getFallConfirmedRoomNameIfEligible($deviceId);
+                    if (array_key_exists($deviceId, $context['fallRoomByDeviceId'])) {
+                        $fallConfirmedRoomName = (string)$context['fallRoomByDeviceId'][$deviceId];
+                    } else {
+                        $fallConfirmedRoomName = $deviceRepo->getFallConfirmedRoomNameIfEligible($deviceId);
+                        $context['fallRoomByDeviceId'][$deviceId] = $fallConfirmedRoomName;
+                    }
                 }
                 if ($fallConfirmedRoomName === '') {
                     continue;
                 }
             }
 
-            if ($detectionRepo === null) {
-                $detectionRepo = new DetectionRepository($db);
-            }
-
-            $detectionRepo->insertDetection([
+            $detectionRows[] = [
                 'event_id' => $eventId,
                 'device_id' => $deviceId,
                 'category' => $alarm['category'],
@@ -152,7 +207,11 @@ function processSingleMessage($db, array $msg, bool $manageOwnTransaction = true
                 'person_index' => $alarm['person_index'] ?? null,
                 'region_id' => $alarm['region_id'] ?? null,
                 'message' => $alarm['message'] ?? '',
-            ]);
+            ];
+        }
+
+        if ($detectionRows) {
+            $detectionRepo->insertDetections($detectionRows);
         }
 
         if ($manageOwnTransaction && $transactionStarted) {
@@ -197,10 +256,11 @@ if (empty($messages)) {
 $db->execute('START TRANSACTION');
 $results = [];
 $hasErrors = false;
+$context = buildBatchContext($db, $messages);
 
 try {
     foreach ($messages as $msg) {
-        $result = processSingleMessage($db, $msg, false);
+        $result = processSingleMessage($db, $msg, $context, false);
         if (($result['status'] ?? 'error') !== 'ok') {
             $hasErrors = true;
         }

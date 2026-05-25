@@ -102,11 +102,31 @@ CREATE TABLE IF NOT EXISTS radares_eventos (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     dispositivo_id int(11) NOT NULL,
     tipo_evento_id int(11) NOT NULL,
-    recebido_em timestamp NOT NULL DEFAULT current_timestamp(),
-    PRIMARY KEY (id),
+    recebido_em datetime NOT NULL DEFAULT current_timestamp(),
+    PRIMARY KEY (id, recebido_em),
     KEY idx_eventos_dispositivo (dispositivo_id),
-    KEY idx_eventos_tipo (tipo_evento_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    KEY idx_eventos_device_type_time (dispositivo_id, tipo_evento_id, recebido_em, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+PARTITION BY RANGE (TO_DAYS(recebido_em)) (
+    PARTITION p_2025_old VALUES LESS THAN (TO_DAYS('2025-05-01')),
+    PARTITION p_2025_05  VALUES LESS THAN (TO_DAYS('2025-06-01')),
+    PARTITION p_2025_06  VALUES LESS THAN (TO_DAYS('2025-07-01')),
+    PARTITION p_2025_07  VALUES LESS THAN (TO_DAYS('2025-08-01')),
+    PARTITION p_2025_08  VALUES LESS THAN (TO_DAYS('2025-09-01')),
+    PARTITION p_2025_09  VALUES LESS THAN (TO_DAYS('2025-10-01')),
+    PARTITION p_2025_10  VALUES LESS THAN (TO_DAYS('2025-11-01')),
+    PARTITION p_2025_11  VALUES LESS THAN (TO_DAYS('2025-12-01')),
+    PARTITION p_2025_12  VALUES LESS THAN (TO_DAYS('2026-01-01')),
+    PARTITION p_2026_01  VALUES LESS THAN (TO_DAYS('2026-02-01')),
+    PARTITION p_2026_02  VALUES LESS THAN (TO_DAYS('2026-03-01')),
+    PARTITION p_2026_03  VALUES LESS THAN (TO_DAYS('2026-04-01')),
+    PARTITION p_2026_04  VALUES LESS THAN (TO_DAYS('2026-05-01')),
+    PARTITION p_2026_05  VALUES LESS THAN (TO_DAYS('2026-06-01')),
+    PARTITION p_2026_06  VALUES LESS THAN (TO_DAYS('2026-07-01')),
+    PARTITION p_2026_07  VALUES LESS THAN (TO_DAYS('2026-08-01')),
+    PARTITION p_2026_08  VALUES LESS THAN (TO_DAYS('2026-09-01')),
+    PARTITION p_future   VALUES LESS THAN MAXVALUE
+);
 
 -- ─── radares_posicao_pessoas ──────────────────────────────
 CREATE TABLE IF NOT EXISTS radares_posicao_pessoas (
@@ -135,9 +155,7 @@ CREATE TABLE IF NOT EXISTS radares_estado_pessoas (
     ultimo_evento enum('No Event','Enter Room','Leave Room','Enter Area','Leave Area','Unknown') DEFAULT NULL,
     regiao_id tinyint unsigned DEFAULT NULL,
     atualizado_em timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-    PRIMARY KEY (dispositivo_id, indice_pessoa),
-    KEY idx_estado_evento (evento_id),
-    KEY idx_estado_atualizado (atualizado_em)
+    PRIMARY KEY (dispositivo_id, indice_pessoa)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ─── radares_sinais_vitais ────────────────────────────────
@@ -180,7 +198,7 @@ CREATE TABLE IF NOT EXISTS radares_estatisticas_sono (
 
 -- ─── radares_detecoes ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS radares_detecoes (
-    id int(11) NOT NULL AUTO_INCREMENT,
+    id bigint(20) NOT NULL AUTO_INCREMENT,
     evento_id bigint(20) DEFAULT NULL,
     dispositivo_id int(11) DEFAULT NULL,
     categoria varchar(20) DEFAULT NULL,
@@ -196,9 +214,9 @@ CREATE TABLE IF NOT EXISTS radares_detecoes (
     intervencao_fim datetime DEFAULT NULL,
     intervencao_fim_por int(11) DEFAULT NULL,
     PRIMARY KEY (id),
-    KEY idx_det_evento (evento_id),
     KEY idx_det_dispositivo (dispositivo_id),
-    KEY idx_det_tipo (tipo)
+    KEY idx_det_tipo (tipo),
+    KEY idx_det_device_time (dispositivo_id, criado_em, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ═══════════════════════════════════════════════════════════

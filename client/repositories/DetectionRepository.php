@@ -11,32 +11,47 @@ class DetectionRepository
 
     public function insertDetection(array $data): int
     {
-        $eventId = isset($data['event_id']) && $data['event_id'] !== null ? (int)$data['event_id'] : 'NULL';
-        $deviceId = isset($data['device_id']) && $data['device_id'] !== null ? (int)$data['device_id'] : 'NULL';
-        $personIndex = isset($data['person_index']) && $data['person_index'] !== null ? (int)$data['person_index'] : 'NULL';
-        $regionId = isset($data['region_id']) && $data['region_id'] !== null ? (int)$data['region_id'] : 'NULL';
+        $this->insertDetections([$data]);
+
+        return (int)$this->db->getLastInsertedId();
+    }
+
+    public function insertDetections(array $detections): void
+    {
+        if (!$detections) {
+            return;
+        }
+
+        $values = [];
+        foreach ($detections as $d) {
+            $eventId = isset($d['event_id']) && $d['event_id'] !== null ? (int)$d['event_id'] : 'NULL';
+            $deviceId = isset($d['device_id']) && $d['device_id'] !== null ? (int)$d['device_id'] : 'NULL';
+            $personIndex = isset($d['person_index']) && $d['person_index'] !== null ? (int)$d['person_index'] : 'NULL';
+            $regionId = isset($d['region_id']) && $d['region_id'] !== null ? (int)$d['region_id'] : 'NULL';
+
+            $values[] = sprintf(
+                '(%s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                $eventId,
+                $deviceId,
+                "'" . $this->db->sanitize($this->normalizeCategoryForStorage($d['category'] ?? '')) . "'",
+                "'" . $this->db->sanitize((string)($d['type'] ?? '')) . "'",
+                "'" . $this->db->sanitize((string)($d['level'] ?? '')) . "'",
+                "'" . $this->db->sanitize((string)($d['source'] ?? '')) . "'",
+                $personIndex,
+                $regionId,
+                "'" . $this->db->sanitize((string)($d['message'] ?? '')) . "'"
+            );
+        }
 
         $result = $this->db->execute(
             "INSERT INTO radares_detecoes
                 (evento_id, dispositivo_id, categoria, tipo, nivel, origem, indice_pessoa, regiao_id, mensagem)
-             VALUES (
-                " . $eventId . ",
-                " . $deviceId . ",
-                '" . $this->db->sanitize($this->normalizeCategoryForStorage($data['category'] ?? '')) . "',
-                '" . $this->db->sanitize((string)($data['type'] ?? '')) . "',
-                '" . $this->db->sanitize((string)($data['level'] ?? '')) . "',
-                '" . $this->db->sanitize((string)($data['source'] ?? '')) . "',
-                " . $personIndex . ",
-                " . $regionId . ",
-                '" . $this->db->sanitize((string)($data['message'] ?? '')) . "'
-             )"
+             VALUES " . implode(',', $values)
         );
 
         if ($result === false) {
-            throw new Exception("Failed to insert detection.");
+            throw new Exception("Failed to insert detections.");
         }
-
-        return (int)$this->db->getLastInsertedId();
     }
 
     public function getLatestDetectionId(): int
