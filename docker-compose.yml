@@ -116,7 +116,7 @@ services:
     environment:
       REDIS_URL: tcp://redis:6379
       TEST_TARGET_URL: http://ingest:8089
-      FORWARD_BATCH_SIZE: 200
+      FORWARD_BATCH_SIZE: ${FORWARD_BATCH_SIZE:-200}
       FORWARD_SLEEP_MS: 10
       FORWARD_DISABLE_BATCH: "false"
     depends_on:
