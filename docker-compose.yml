@@ -1,0 +1,153 @@
+services:
+  mysql:
+    image: mysql:8.3
+    container_name: test-radar-mysql
+    restart: unless-stopped
+    command: >
+      --innodb_flush_log_at_trx_commit=2
+      --innodb_log_file_size=512M
+      --innodb_buffer_pool_size=1G
+      --innodb_flush_method=O_DIRECT
+      --max_connections=500
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: radar_test
+      MYSQL_USER: radar_user
+      MYSQL_PASSWORD: radar_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: test-radar-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: test-radar-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1884:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  adminer:
+    image: adminer
+    container_name: test-radar-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    profiles:
+      - admin
+
+  ingest:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    container_name: test-radar-ingest
+    restart: unless-stopped
+    working_dir: /app/client
+    command: php -S 0.0.0.0:8089 -t /app/client /app/client/router.php
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./:/app
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: radar_test
+      DB_USERNAME: radar_user
+      DB_PASSWORD: radar_pass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  mqtt-worker:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    container_name: test-radar-mqtt-worker
+    restart: unless-stopped
+    working_dir: /app/server
+    command: php /app/server/mqtt-worker.php
+    volumes:
+      - ./:/app
+    environment:
+      MQTT_SERVER: mosquitto
+      MQTT_PORT: 1883
+      MQTT_TOPIC: radar/+/+
+      MQTT_CLIENT_ID: php-radar-router-docker
+      REDIS_URL: tcp://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+  forward-consumer:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    container_name: test-radar-forward-consumer
+    restart: unless-stopped
+    working_dir: /app/server
+    command: php /app/server/forward-consumer.php --license=9999
+    volumes:
+      - ./:/app
+    environment:
+      REDIS_URL: tcp://redis:6379
+      TEST_TARGET_URL: http://ingest:8089
+      FORWARD_BATCH_SIZE: 200
+      FORWARD_SLEEP_MS: 10
+      FORWARD_DISABLE_BATCH: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
+      ingest:
+        condition: service_started
+
+  radar-simulator:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    container_name: test-radar-simulator
+    restart: unless-stopped
+    working_dir: /app/server
+    command: php /app/server/simulate-radars.php --count=500 --license=9999
+    volumes:
+      - ./:/app
+    environment:
+      MQTT_SERVER: mosquitto
+      MQTT_PORT: 1883
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: radar_test
+      DB_USERNAME: radar_user
+      DB_PASSWORD: radar_pass
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+volumes:
+  mysql_data:

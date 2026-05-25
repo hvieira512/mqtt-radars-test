@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# IDE/editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment/secrets
+server/.env
+
+# Dependencies
+server/vendor/
+
+# Runtime logs and reports
+reports/
+*.log
+
+# Temp files
+tmp/
+temp/
+*.tmp
