@@ -233,6 +233,20 @@ export const typeConfig = {
     },
 };
 
+export function loadScript(url) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${url}"]`)) {
+            resolve();
+            return;
+        }
+        const s = document.createElement('script');
+        s.src = url;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Failed to load script: ${url}`));
+        document.head.appendChild(s);
+    });
+}
+
 export function calcularDuracao(inicio, fim) {
     if (!inicio || !fim) return "-";
 

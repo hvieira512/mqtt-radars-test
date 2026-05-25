@@ -11,10 +11,29 @@ class MonitoringRepository
 
     public function getDashboardData(): array
     {
-        return [
+        $cacheKeyParts = [
+            $_SERVER['HTTP_HOST'] ?? 'cli',
+            isset($this->db->database) ? (string)$this->db->database : '',
+        ];
+        $cacheFile = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
+            . DIRECTORY_SEPARATOR
+            . 'radar_dashboard_' . md5(implode('|', $cacheKeyParts)) . '.json';
+
+        if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < 300) {
+            $cached = json_decode((string)file_get_contents($cacheFile), true);
+            if (is_array($cached) && isset($cached['config'], $cached['groups'])) {
+                return $cached;
+            }
+        }
+
+        $data = [
             'config' => $this->getDashboardConfig(),
             'groups' => $this->getRoomGroups(),
         ];
+
+        @file_put_contents($cacheFile, json_encode($data), LOCK_EX);
+
+        return $data;
     }
 
     public function listOnlineDeviceUids(int $seconds = 180): array

@@ -404,20 +404,30 @@ function renderMonitoringRoomCard(array $room, array $i18n): void
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" defer></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js" defer></script>
     <script src="/assets/plugins/custom/datatables/i18n/pt.json" type="application/json"></script>
-    <script src="/_js/custom.js"></script>
+    <script src="/_js/custom.js" defer></script>
 
-    <!-- AM Charts 5 -->
-    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
-
-    <!-- Konva -->
-    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <link rel="modulepreload" href="/_js/radar/main.js">
+    <link rel="modulepreload" href="/_js/radar/core/index.js">
+    <link rel="modulepreload" href="/_js/radar/core/poll.js">
+    <link rel="modulepreload" href="/_js/radar/core/grid.js">
+    <link rel="modulepreload" href="/_js/radar/core/toast.js">
+    <link rel="modulepreload" href="/_js/radar/core/utils.js">
+    <link rel="modulepreload" href="/_js/radar/live/index.js">
+    <link rel="modulepreload" href="/_js/radar/live/modal-controller.js">
+    <link rel="modulepreload" href="/_js/radar/live/page-updater.js">
+    <link rel="modulepreload" href="/_js/radar/live/info-panel.js">
+    <link rel="modulepreload" href="/_js/radar/scene/index.js">
+    <link rel="modulepreload" href="/_js/radar/scene/live-map.js">
+    <link rel="modulepreload" href="/_js/radar/scene/radar-scene.js">
+    <link rel="modulepreload" href="/_js/radar/playback/index.js">
+    <link rel="modulepreload" href="/_js/radar/playback/controller.js">
+    <link rel="modulepreload" href="/_js/radar/replay/index.js">
+    <link rel="modulepreload" href="/_js/radar/fall-replay/main.js">
+    <link rel="modulepreload" href="/_js/radar/sleep-report/main.js">
 
     <script>
         // Hardcoded translations for JS (normally provided by resources.php)

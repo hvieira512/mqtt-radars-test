@@ -1,7 +1,7 @@
 import { grid, setLayoutCache } from "../core/index.js";
 import * as info from "./info-panel.js";
 import { liveMap as map } from "../scene/index.js";
-import { removeLoading, renderLoading } from "../../utils.js";
+import { removeLoading, renderLoading, loadScript } from "../../utils.js";
 
 const state = {
     modal: null,
@@ -233,6 +233,18 @@ export async function handleModalShown({ uid, name }) {
 
     grid.loadAlarms(uid);
     grid.loadEvents(uid);
+
+    // Lazy-load Konva + AMCharts (not needed on page load, only when modal opens)
+    await Promise.all([
+        loadScript('https://unpkg.com/konva@9/konva.min.js'),
+        loadScript('https://cdn.amcharts.com/lib/5/index.js'),
+    ]);
+    await Promise.all([
+        loadScript('https://cdn.amcharts.com/lib/5/xy.js'),
+        loadScript('https://cdn.amcharts.com/lib/5/percent.js'),
+        loadScript('https://cdn.amcharts.com/lib/5/themes/Animated.js'),
+    ]);
+
     await fetchMapData(uid);
 }
 
