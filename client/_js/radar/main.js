@@ -11,6 +11,7 @@ import { controller as playbackController } from "./playback/index.js";
 import { initFallReplayModal } from "./fall-replay/main.js";
 import { initSleepReportModal } from "./sleep-report/main.js";
 import { initMonthlySleepReportModal } from "./monthly-sleep-report/index.js";
+import { loadScript } from "../utils.js";
 
 let modal = null;
 let isModalBound = false;
@@ -171,6 +172,17 @@ export function initModal() {
 }
 
 export async function init() {
+    // Load Konva + AMCharts early (removed from blocking HTML, loaded async now)
+    await Promise.all([
+        loadScript('https://unpkg.com/konva@9/konva.min.js'),
+        loadScript('https://cdn.amcharts.com/lib/5/index.js'),
+    ]);
+    await Promise.all([
+        loadScript('https://cdn.amcharts.com/lib/5/xy.js'),
+        loadScript('https://cdn.amcharts.com/lib/5/percent.js'),
+        loadScript('https://cdn.amcharts.com/lib/5/themes/Animated.js'),
+    ]);
+
     runInitStep("modal", initModal);
     runInitStep("fall-replay", initFallReplayModal);
     runInitStep("sleep-report", initSleepReportModal);
