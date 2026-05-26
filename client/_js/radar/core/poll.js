@@ -4,6 +4,7 @@ let pollInterval = null;
 let afterId = 0;
 let afterDetectionId = 0;
 let isPolling = false;
+let pollTick = 0;
 const pollUrl = "/modulos/radares/_ajax/radar-data/poll.php";
 let pollDelay = 1000;
 
@@ -45,11 +46,16 @@ export function start(delay) {
 function fetchPollData() {
     if (isPolling) return;
     isPolling = true;
+    pollTick++;
+
+    const includeOnlineDevices =
+        (afterId === 0 && afterDetectionId === 0) || pollTick % 10 === 0;
 
     const dataParams = {
         after_id: afterId,
         after_detection_id: afterDetectionId,
         limit: 50,
+        include_online: includeOnlineDevices ? 1 : 0,
     };
 
     $.ajax({

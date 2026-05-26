@@ -315,6 +315,7 @@ var pollInterval = null;
 var afterId = 0;
 var afterDetectionId = 0;
 var isPolling = false;
+var pollTick = 0;
 var pollUrl = "/modulos/radares/_ajax/radar-data/poll.php";
 var pollDelay = 1000;
 
@@ -356,11 +357,16 @@ var start = function(delay) {
 var fetchPollData = function() {
     if (isPolling) return;
     isPolling = true;
+    pollTick++;
+
+    const includeOnlineDevices =
+        (afterId === 0 && afterDetectionId === 0) || pollTick % 10 === 0;
 
     const dataParams = {
         after_id: afterId,
         after_detection_id: afterDetectionId,
         limit: 50,
+        include_online: includeOnlineDevices ? 1 : 0,
     };
 
     $.ajax({
@@ -3572,35 +3578,96 @@ __r['m16'].onVitals = onVitals;
 // --- _js/radar/live/page-updater.js ---
 var BED_POSTURES = __r['m4'].BED_POSTURES, getLayoutCache = __r['m4'].getLayoutCache;
 
-var devicePeopleState = {};
 var lastMonthFalls = 0;
+var totalBedSlots = null;
+var lastGlobalKpis = null;
+
+var devicePeopleState = new Map();
+var roomActiveDevices = new Map();
+var roomMetrics = new Map();
+var bedRegionsCache = new Map();
+var deviceMetaCache = new Map();
+var roomViewCache = new Map();
+
+var pendingDeviceUpdates = new Map();
+var flushScheduled = false;
 
 var formatQuantity = function(total, singularKey) {
     const key = total === 1 ? singularKey : singularKey + "s";
     return `${total} ${String(translations.i18n[key]).toLowerCase()}`;
 }
 
-var getRadarCardByUid = function(uid) {
-    const button = getRadarButtonByUid(document, uid);
-    if (!button) return null;
-    return button.closest(".item-radar");
+var rebuildDeviceMetaCache = function() {
+    deviceMetaCache.clear();
+
+    document.querySelectorAll(".item-radar button[data-id]").forEach((button) => {
+        const deviceCode = button.dataset.id;
+        if (!deviceCode || deviceMetaCache.has(deviceCode)) return;
+
+        const radarCard = button.closest(".item-radar");
+        if (!radarCard) return;
+
+        const roomId = String(radarCard.dataset.quarto || "");
+        if (!roomId) return;
+
+        deviceMetaCache.set(deviceCode, {
+            button,
+            radarCard,
+            roomId,
+            isWc: button.dataset.wc === "1",
+        });
+    });
 }
 
-var getRadarButtonByUid = function(root, uid) {
-    return (
-        Array.from(root.querySelectorAll("button[data-id]")).find(
-            (button) => button.dataset.id === uid,
-        ) || null
+var getDeviceMeta = function(deviceCode) {
+    const cached = deviceMetaCache.get(deviceCode);
+    if (cached) return cached;
+
+    rebuildDeviceMetaCache();
+    return deviceMetaCache.get(deviceCode) || null;
+}
+
+var getRoomView = function(roomId) {
+    const cached = roomViewCache.get(roomId);
+    if (cached) return cached;
+
+    const radarCard = document.querySelector(`.item-radar[data-quarto="${roomId}"]`);
+    if (!radarCard) return null;
+
+    const bedCounter = radarCard.querySelector(".numero-pessoas-camas");
+    const wcCounter = radarCard.querySelector(".radar-descricao-info .numero-pessoas-wc");
+    const wcIcons = Array.from(
+        radarCard.querySelectorAll(".container-wc .item-wc i.fa-toilet"),
     );
+
+    const bedItems = Array.from(radarCard.querySelectorAll(".item-cama")).map((el) => {
+        const deviceIds = Array.from(el.querySelectorAll("button[data-id]"))
+            .filter((button) => button.dataset.wc !== "1")
+            .map((button) => button.dataset.id)
+            .filter(Boolean);
+
+        return { el, deviceIds };
+    });
+
+    const view = {
+        radarCard,
+        bedCounter,
+        bedCounterParent: bedCounter ? bedCounter.parentElement : null,
+        wcCounter,
+        wcCounterParent: wcCounter ? wcCounter.parentElement : null,
+        wcIcons,
+        bedItems,
+        bedCount: bedItems.length,
+    };
+
+    roomViewCache.set(roomId, view);
+    return view;
 }
 
-var toggleBedIcon = function(bedItem, hasPersonInBed) {
-    const bedIcon = bedItem.querySelector(".estado-na-cama");
-    if (!bedIcon) return;
-
-    bedIcon.classList.toggle("text-success", hasPersonInBed);
-    bedIcon.classList.toggle("fw-bold", hasPersonInBed);
-    bedIcon.classList.toggle("opacity-25", !hasPersonInBed);
+var getTotalBedSlots = function() {
+    if (totalBedSlots !== null) return totalBedSlots;
+    totalBedSlots = document.querySelectorAll(".item-radar .item-cama").length;
+    return totalBedSlots;
 }
 
 var parseAreasToBedRegions = function(declareAreaStr) {
@@ -3626,155 +3693,245 @@ var parseAreasToBedRegions = function(declareAreaStr) {
     return bedRegionKeys;
 }
 
-var updateGlobalKPIs = function() {
-    const bedroomDeviceCount = document.querySelectorAll(
-        ".item-radar .item-cama",
-    ).length;
-    const occupiedBedCount = document.querySelectorAll(
-        ".item-radar .item-cama .estado-na-cama.text-success",
-    ).length;
-    const emptyBeds = bedroomDeviceCount - occupiedBedCount;
+var getBedRegionsForDevice = function(deviceCode) {
+    const layoutData = getLayoutCache(deviceCode);
+    const declareArea = layoutData ? String(layoutData.declare_area || "") : "";
 
-    let globalWCPeople = 0;
-    document.querySelectorAll(".item-radar").forEach((card) => {
-        const wcCounter = card.querySelector(".numero-pessoas-wc");
-        if (!wcCounter) return;
+    const cached = bedRegionsCache.get(deviceCode);
+    if (cached && cached.declareArea === declareArea) {
+        return cached.regions;
+    }
 
-        const value = parseInt(wcCounter.textContent, 10) || 0;
-        globalWCPeople = Math.max(globalWCPeople, value);
+    const regions = parseAreasToBedRegions(declareArea);
+    bedRegionsCache.set(deviceCode, { declareArea, regions });
+    return regions;
+}
+
+var toggleBedIcon = function(bedItem, hasPersonInBed) {
+    const bedIcon = bedItem.querySelector(".estado-na-cama");
+    if (!bedIcon) return;
+
+    bedIcon.classList.toggle("text-success", hasPersonInBed);
+    bedIcon.classList.toggle("fw-bold", hasPersonInBed);
+    bedIcon.classList.toggle("opacity-25", !hasPersonInBed);
+}
+
+var addRoomActiveDevice = function(roomId, deviceCode) {
+    let roomSet = roomActiveDevices.get(roomId);
+    if (!roomSet) {
+        roomSet = new Set();
+        roomActiveDevices.set(roomId, roomSet);
+    }
+    roomSet.add(deviceCode);
+}
+
+var removeRoomActiveDevice = function(roomId, deviceCode) {
+    const roomSet = roomActiveDevices.get(roomId);
+    if (!roomSet) return;
+
+    roomSet.delete(deviceCode);
+    if (roomSet.size === 0) {
+        roomActiveDevices.delete(roomId);
+    }
+}
+
+var setCounterState = function(counterEl, parentEl, count) {
+    if (!counterEl) return;
+
+    counterEl.textContent = String(count);
+    parentEl?.classList.toggle("text-success", count > 0);
+    parentEl?.classList.toggle("fw-bold", count > 0);
+}
+
+var renderRoomState = function(roomId) {
+    const roomView = getRoomView(roomId);
+    if (!roomView) return;
+
+    const roomSet = roomActiveDevices.get(roomId);
+    const bedroomOccupancyByDevice = new Map();
+    let bedroomMaxCount = 0;
+    let totalWcPeople = 0;
+    let hasAnyWcOccupant = false;
+
+    if (roomSet) {
+        roomSet.forEach((deviceCode) => {
+            const state = devicePeopleState.get(deviceCode);
+            if (!state) return;
+
+            if (state.isWc) {
+                totalWcPeople += state.people.length;
+                if (state.people.length > 0) {
+                    hasAnyWcOccupant = true;
+                }
+                return;
+            }
+
+            bedroomMaxCount = Math.max(bedroomMaxCount, state.people.length);
+
+            const deviceBedRegions = getBedRegionsForDevice(deviceCode);
+            const hasPersonInBed = state.people.some(
+                (person) =>
+                    deviceBedRegions.has(person.region_id) &&
+                    BED_POSTURES.has(person.posture_state),
+            );
+
+            bedroomOccupancyByDevice.set(deviceCode, hasPersonInBed);
+        });
+    }
+
+    setCounterState(
+        roomView.bedCounter,
+        roomView.bedCounterParent,
+        bedroomMaxCount,
+    );
+
+    let occupiedBedCount = 0;
+    roomView.bedItems.forEach(({ el, deviceIds }) => {
+        const hasPersonInBed = deviceIds.some(
+            (deviceCode) => bedroomOccupancyByDevice.get(deviceCode) === true,
+        );
+        if (hasPersonInBed) {
+            occupiedBedCount++;
+        }
+        toggleBedIcon(el, hasPersonInBed);
     });
 
-    const kpiMap = {
+    roomView.wcIcons.forEach((icon) => {
+        icon.classList.toggle("text-success", hasAnyWcOccupant);
+        icon.classList.toggle("fw-bold", hasAnyWcOccupant);
+    });
+
+    setCounterState(
+        roomView.wcCounter,
+        roomView.wcCounterParent,
+        totalWcPeople,
+    );
+
+    roomMetrics.set(roomId, {
+        occupiedBedCount,
+        wcPeopleCount: totalWcPeople,
+    });
+}
+
+var updateGlobalKPIs = function() {
+    const bedroomDeviceCount = getTotalBedSlots();
+
+    let occupiedBedCount = 0;
+    let globalWCPeople = 0;
+
+    roomMetrics.forEach((metrics) => {
+        occupiedBedCount += metrics.occupiedBedCount || 0;
+        globalWCPeople = Math.max(globalWCPeople, metrics.wcPeopleCount || 0);
+    });
+
+    const emptyBeds = bedroomDeviceCount - occupiedBedCount;
+
+    const kpis = {
         "indicador-pessoas-monitorizadas": bedroomDeviceCount,
         "indicador-camas-ocupadas": occupiedBedCount,
         "indicador-camas-vazias": emptyBeds,
         "indicador-pessoas-wc": globalWCPeople,
     };
 
-    Object.entries(kpiMap).forEach(([id, value]) => {
+    const last = lastGlobalKpis;
+    if (
+        last &&
+        last["indicador-pessoas-monitorizadas"] ===
+            kpis["indicador-pessoas-monitorizadas"] &&
+        last["indicador-camas-ocupadas"] === kpis["indicador-camas-ocupadas"] &&
+        last["indicador-camas-vazias"] === kpis["indicador-camas-vazias"] &&
+        last["indicador-pessoas-wc"] === kpis["indicador-pessoas-wc"]
+    ) {
+        return;
+    }
+    lastGlobalKpis = kpis;
+
+    const labels = {
+        "indicador-pessoas-monitorizadas": formatQuantity(
+            bedroomDeviceCount,
+            "pessoa",
+        ),
+        "indicador-camas-ocupadas": formatQuantity(occupiedBedCount, "cama"),
+        "indicador-camas-vazias": formatQuantity(emptyBeds, "cama"),
+        "indicador-pessoas-wc": formatQuantity(globalWCPeople, "pessoa"),
+    };
+
+    Object.entries(kpis).forEach(([id]) => {
         const element = document.getElementById(id);
         if (!element) return;
-
-        const labels = {
-            "indicador-pessoas-monitorizadas": formatQuantity(value, "pessoa"),
-            "indicador-camas-ocupadas": formatQuantity(value, "cama"),
-            "indicador-camas-vazias": formatQuantity(value, "cama"),
-            "indicador-pessoas-wc": formatQuantity(value, "pessoa"),
-        };
-
-        element.textContent = labels[id] || String(value);
+        element.textContent = labels[id];
     });
 }
 
-var onPosition = function(deviceCode, people = []) {
-    const radarCard = getRadarCardByUid(deviceCode);
-    if (!radarCard) return;
+var flushPendingPositions = function() {
+    const affectedRooms = new Set();
 
-    const button = getRadarButtonByUid(radarCard, deviceCode);
-    const isWc = button ? button.dataset.wc === "1" : false;
+    pendingDeviceUpdates.forEach((update, deviceCode) => {
+        const previous = devicePeopleState.get(deviceCode);
+        if (previous) {
+            removeRoomActiveDevice(previous.roomId, deviceCode);
+            affectedRooms.add(previous.roomId);
+        }
+
+        if (update.people.length === 0) {
+            devicePeopleState.delete(deviceCode);
+            return;
+        }
+
+        devicePeopleState.set(deviceCode, update);
+        addRoomActiveDevice(update.roomId, deviceCode);
+        affectedRooms.add(update.roomId);
+    });
+
+    pendingDeviceUpdates.clear();
+
+    affectedRooms.forEach((roomId) => {
+        renderRoomState(roomId);
+    });
+
+    updateGlobalKPIs();
+}
+
+var schedulePositionFlush = function() {
+    if (flushScheduled) return;
+    flushScheduled = true;
+
+    const flush = () => {
+        flushScheduled = false;
+        flushPendingPositions();
+    };
+
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+        window.requestAnimationFrame(flush);
+        return;
+    }
+
+    setTimeout(flush, 16);
+}
+
+var onPosition = function(deviceCode, people = []) {
+    const meta = getDeviceMeta(deviceCode);
+    if (!meta) return;
+
     const validPeople = Array.isArray(people)
         ? people.filter((person) => Number(person.person_index) !== 88)
         : [];
 
-    if (validPeople.length === 0) {
-        delete devicePeopleState[deviceCode];
-    } else {
-        devicePeopleState[deviceCode] = { people: validPeople, isWc };
-    }
-
-    const quartoId = radarCard.dataset.quarto;
-    let bedroomMaxCount = 0;
-    const bedroomOccupancyByDevice = new Map();
-
-    const layoutData = getLayoutCache(deviceCode);
-    const bedRegionKeys = layoutData
-        ? parseAreasToBedRegions(layoutData.declare_area)
-        : new Set();
-
-    Object.entries(devicePeopleState).forEach(([code, state]) => {
-        const card = getRadarCardByUid(code);
-        if (!card || card.dataset.quarto !== quartoId) return;
-
-        const deviceLayout = getLayoutCache(code);
-        const deviceBedRegions = deviceLayout
-            ? parseAreasToBedRegions(deviceLayout.declare_area)
-            : bedRegionKeys;
-
-        if (state.isWc) {
-            return;
-        }
-
-        bedroomMaxCount = Math.max(bedroomMaxCount, state.people.length);
-        const hasPersonInBed = state.people.some(
-            (p) =>
-                deviceBedRegions.has(p.region_id) &&
-                BED_POSTURES.has(p.posture_state),
-        );
-
-        bedroomOccupancyByDevice.set(code, hasPersonInBed);
+    pendingDeviceUpdates.set(deviceCode, {
+        people: validPeople,
+        isWc: meta.isWc,
+        roomId: meta.roomId,
     });
 
-    const bedCounter = radarCard.querySelector(".numero-pessoas-camas");
-    if (bedCounter) {
-        bedCounter.textContent = bedroomMaxCount;
-        const parent = bedCounter.parentElement;
-        parent?.classList.toggle("text-success", bedroomMaxCount > 0);
-        parent?.classList.toggle("fw-bold", bedroomMaxCount > 0);
-    }
-
-    radarCard.querySelectorAll(".item-cama").forEach((bedItem) => {
-        const bedHasPersonInBed = Array.from(
-            bedItem.querySelectorAll("button[data-id]"),
-        ).some(
-            (bedButton) =>
-                bedButton.dataset.wc !== "1" &&
-                bedroomOccupancyByDevice.get(bedButton.dataset.id) === true,
-        );
-
-        toggleBedIcon(bedItem, bedHasPersonInBed);
-    });
-
-    const wcDevicesInRoom = Object.entries(devicePeopleState).filter(
-        ([code, state]) => {
-            const card = getRadarCardByUid(code);
-            return state.isWc && card?.dataset?.quarto === quartoId;
-        },
-    );
-
-    const hasAnyWcOccupant = wcDevicesInRoom.some(
-        ([, state]) => state.people.length > 0,
-    );
-
-    radarCard.querySelectorAll(".container-wc .item-wc").forEach((wcItem) => {
-        const icon = wcItem.querySelector("i.fa-toilet");
-        if (!icon) return;
-
-        icon.classList.toggle("text-success", hasAnyWcOccupant);
-        icon.classList.toggle("fw-bold", hasAnyWcOccupant);
-    });
-
-    const wcCounter = radarCard.querySelector(
-        ".radar-descricao-info .numero-pessoas-wc",
-    );
-    if (wcCounter) {
-        const totalWcPeople = wcDevicesInRoom.reduce(
-            (sum, [, state]) => sum + state.people.length,
-            0,
-        );
-        wcCounter.textContent = totalWcPeople;
-        const parent = wcCounter.parentElement;
-        parent?.classList.toggle("text-success", totalWcPeople > 0);
-        parent?.classList.toggle("fw-bold", totalWcPeople > 0);
-    }
-
-    updateGlobalKPIs();
+    schedulePositionFlush();
 }
 
 var onAlarm = function(alarm) {
     if (!alarm || !alarm.device_code) return;
 
-    const radarCard = getRadarCardByUid(alarm.device_code);
-    if (!radarCard) return;
+    const meta = getDeviceMeta(alarm.device_code);
+    if (!meta) return;
+    const radarCard = meta.radarCard;
 
     const dangerTypes = [
         "fall_confirmed",
@@ -3790,13 +3947,8 @@ var onAlarm = function(alarm) {
     radarCard.dataset.radarSosType = alarm.alarm_type || "";
 
     if (alarm.detection_id) {
-        const radarButton = radarCard.querySelector(
-            `button[data-id="${alarm.device_code}"]`,
-        );
-        if (radarButton) {
-            radarButton.dataset.detectionId = alarm.detection_id;
-            radarButton.dataset.detectionType = alarm.alarm_type || "";
-        }
+        meta.button.dataset.detectionId = alarm.detection_id;
+        meta.button.dataset.detectionType = alarm.alarm_type || "";
     }
 
     radarCard
@@ -3824,13 +3976,15 @@ var onPollComplete = function(currentMonthFalls) {
 }
 
 var onOnlineDevices = function(onlineDevices = []) {
+    const onlineDevicesSet = new Set(onlineDevices);
+
     document
         .querySelectorAll(".radar-link-button[data-id]")
         .forEach((button) => {
             const uid = button.getAttribute("data-id");
             if (!uid) return;
 
-            const isOnline = onlineDevices.includes(uid);
+            const isOnline = onlineDevicesSet.has(uid);
             if (isOnline) {
                 if (!button.classList.contains("bg-success")) {
                     button.classList.add("bg-success", "text-white");
