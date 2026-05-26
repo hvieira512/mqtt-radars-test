@@ -21,6 +21,9 @@ try {
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
     $limit = min($limit, 100);
     $is_first_poll = ($last_id === 0 && $last_detection_id === 0);
+    $include_online = isset($_GET['include_online'])
+        ? ((int)$_GET['include_online'] === 1)
+        : $is_first_poll;
 
     $eventRepository = new EventRepository($db);
     $positionRepository = new PositionRepository($db);
@@ -28,17 +31,25 @@ try {
     $detectionRepository = new DetectionRepository($db);
     $monitoringRepository = new MonitoringRepository($db);
 
-    $onlineDevices = $monitoringRepository->listOnlineDeviceUidsCached(180, 60);
-    $onlineDeviceMap = array_fill_keys($onlineDevices, true);
+    $onlineDevices = [];
+    $onlineDeviceMap = [];
+    if ($is_first_poll || $include_online) {
+        $onlineDevices = $monitoringRepository->listOnlineDeviceUidsCached(180, 60);
+        $onlineDeviceMap = array_fill_keys($onlineDevices, true);
+    }
 
     $latest_event_id = $eventRepository->getLatestEventId();
     $latest_detection_id = $detectionRepository->getLatestDetectionId();
 
     if ($last_id === 0) {
         $last_id = max(0, $latest_event_id - 50);
+    } else {
+        $last_id = min($last_id, $latest_event_id);
     }
     if ($last_detection_id === 0) {
         $last_detection_id = max(0, $latest_detection_id - 50);
+    } else {
+        $last_detection_id = min($last_detection_id, $latest_detection_id);
     }
 
     $start_after_detection_id = $last_detection_id;
@@ -66,8 +77,6 @@ try {
             $eventIdsByType[$type][] = $eventId;
         }
     }
-    $latest_event_id = max($latest_event_id, $max_id);
-
     $positionsByEvent = $eventIdsByType['position']
         ? $positionRepository->findByEventIds($eventIdsByType['position'])
         : [];
@@ -85,7 +94,7 @@ try {
         $payload = [];
 
         if ($type === 'position') {
-            if (!isset($onlineDeviceMap[$event['device_code']])) {
+            if ($is_first_poll && !isset($onlineDeviceMap[$event['device_code']])) {
                 continue;
             }
             $payload = ['people' => $positionsByEvent[$eventId] ?? []];
@@ -139,9 +148,12 @@ try {
         'count' => count($items) + count($alarms),
         'latest_event_id' => $latest_event_id,
         'latest_detection_id' => $latest_detection_id,
-        'online_devices' => $onlineDevices,
         'current_month_falls' => $fallsCount,
     ];
+
+    if ($is_first_poll || $include_online) {
+        $response['online_devices'] = $onlineDevices;
+    }
 
     echo json_encode($response);
 

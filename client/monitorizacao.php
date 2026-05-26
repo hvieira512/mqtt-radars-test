@@ -226,20 +226,6 @@ require_once __DIR__ . '/includes/room-card-renderer.php';
 
 $BATCH_SIZE = 20;
 
-// Encode room data for JS lazy loading — only groups + rooms, no rendering HTML
-$roomGroupsData = [];
-foreach ($monitoringDashboard['groups'] as $g) {
-    $groupRooms = [];
-    foreach ($g['rooms'] as $r) {
-        $groupRooms[] = $r;
-    }
-    $roomGroupsData[] = $groupRooms;
-}
-$initialBatches = [];
-foreach ($roomGroupsData as $gi => $rooms) {
-    $initialBatches[$gi] = count($rooms) <= $BATCH_SIZE;
-}
-
 ?>
 <!DOCTYPE html>
 <html lang="pt">

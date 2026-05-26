@@ -39,7 +39,7 @@ class MonitoringRepository
     public function listOnlineDeviceUids(int $seconds = 180): array
     {
         $rows = $this->db->getAll("
-            SELECT r.uid
+            SELECT DISTINCT r.uid
             FROM radares_ultimo_evento ue
             INNER JOIN radares r ON r.id = ue.dispositivo_id
             INNER JOIN radares_esquema resq ON resq.id_radar = r.id

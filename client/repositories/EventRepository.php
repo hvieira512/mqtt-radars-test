@@ -71,8 +71,8 @@ class EventRepository
                 e.recebido_em as created_at,
                 d.uid as device_code,
                 e.tipo_evento_id
-            FROM radares_eventos e
-            JOIN radares d ON d.id = e.dispositivo_id
+            FROM radares_eventos e FORCE INDEX (PRIMARY)
+            STRAIGHT_JOIN radares d ON d.id = e.dispositivo_id
             WHERE e.id > $afterId
             $typeCondition
             ORDER BY e.id ASC
