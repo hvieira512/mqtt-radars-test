@@ -48,8 +48,16 @@ export function toast({
     ...options
 }) {
     const themeConfig = themes[theme] || themes.info;
-    const defaultTimer = (theme === 'perigo' || theme === 'danger') ? 8000 : 5000;
+    const defaultTimer = theme === "perigo" || theme === "danger" ? 8000 : 5000;
     const finalTimer = timer !== null ? timer : defaultTimer;
+
+    if (typeof Swal === "undefined" || typeof Swal.fire !== "function") {
+        const message = [title, text].filter(Boolean).join(" - ");
+        const level =
+            theme === "danger" || theme === "perigo" ? "error" : "warn";
+        console[level](`[toast:${theme}] ${message}`);
+        return;
+    }
 
     Swal.fire({
         toast: true,

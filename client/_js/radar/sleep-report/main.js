@@ -72,6 +72,10 @@ const setReportVisibility = (hasData) => {
 };
 
 const syncPeriodPickerVisibility = (activePane = "#sleep-report-daily-pane") => {
+    if (!DOM.periodPickers || typeof DOM.periodPickers.forEach !== "function") {
+        return;
+    }
+
     const activePeriod =
         activePane === "#sleep-report-monthly-pane" ? "monthly" : "daily";
 

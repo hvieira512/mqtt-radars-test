@@ -226,6 +226,27 @@ CREATE TABLE IF NOT EXISTS radares_detecoes (
     KEY idx_det_device_time (dispositivo_id, criado_em, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- ─── radares_relatorios_sono ───────────────────────────────
+CREATE TABLE IF NOT EXISTS radares_relatorios_sono (
+    id bigint(20) NOT NULL AUTO_INCREMENT,
+    utilizador_id int(11) NOT NULL,
+    dispositivo_id int(11) NOT NULL,
+    tipo_relatorio enum('daily','monthly') NOT NULL DEFAULT 'daily',
+    data_relatorio date NOT NULL,
+    completo tinyint(1) NOT NULL DEFAULT 1,
+    mes_relatorio char(7) DEFAULT NULL,
+    pontuacao tinyint(3) unsigned DEFAULT NULL,
+    payload_bruto longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload_bruto`)),
+    criado_em timestamp NOT NULL DEFAULT current_timestamp(),
+    atualizado_em timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_relatorio_diario (utilizador_id, dispositivo_id, tipo_relatorio, data_relatorio),
+    UNIQUE KEY uk_relatorio_mensal (utilizador_id, dispositivo_id, tipo_relatorio, mes_relatorio),
+    KEY idx_relatorios_mes (dispositivo_id, tipo_relatorio, mes_relatorio),
+    KEY idx_relatorios_procura (dispositivo_id, tipo_relatorio, data_relatorio),
+    CONSTRAINT fk_relatorio_dispositivo FOREIGN KEY (dispositivo_id) REFERENCES radares (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- ═══════════════════════════════════════════════════════════
 -- SEED DATA
 -- ═══════════════════════════════════════════════════════════
@@ -233,6 +254,7 @@ CREATE TABLE IF NOT EXISTS radares_detecoes (
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE radares_ultimo_evento;
 TRUNCATE TABLE radares_detecoes;
+TRUNCATE TABLE radares_relatorios_sono;
 TRUNCATE TABLE radares_estatisticas_sono;
 TRUNCATE TABLE radares_estatisticas_minuto;
 TRUNCATE TABLE radares_sinais_vitais;
@@ -423,6 +445,7 @@ UNION ALL SELECT 'radares_esquema', COUNT(*) FROM radares_esquema
 UNION ALL SELECT 'utentes', COUNT(*) FROM utentes
 UNION ALL SELECT 'utentes_admissao', COUNT(*) FROM utentes_admissao
 UNION ALL SELECT 'radares_layouts', COUNT(*) FROM radares_layouts
+UNION ALL SELECT 'radares_relatorios_sono', COUNT(*) FROM radares_relatorios_sono
 UNION ALL SELECT 'configs_ucc', COUNT(*) FROM configs_ucc
 UNION ALL SELECT 'configs_tipologias', COUNT(*) FROM configs_tipologias
 UNION ALL SELECT 'configs_tipologia_pisos', COUNT(*) FROM configs_tipologia_pisos;

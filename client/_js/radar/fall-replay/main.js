@@ -72,6 +72,34 @@ const state = {
     requestToken: 0,
 };
 
+function isModalVisible() {
+    return Boolean(state.modal?.classList?.contains("show"));
+}
+
+function showFallReplayModal() {
+    if (!state.modal) return;
+
+    if (
+        typeof bootstrap !== "undefined" &&
+        bootstrap?.Modal &&
+        typeof bootstrap.Modal.getOrCreateInstance === "function"
+    ) {
+        const instance = bootstrap.Modal.getOrCreateInstance(state.modal, {
+            backdrop: false,
+        });
+        instance.show();
+        return;
+    }
+
+    const jqModal = $(state.modal);
+    if (jqModal.length && typeof jqModal.modal === "function") {
+        jqModal.modal({
+            backdrop: false,
+            show: true,
+        });
+    }
+}
+
 function renderReplayCurrentPeople(elementId, people = []) {
     return renderSharedReplayCurrentPeople(elementId, people);
 }
@@ -621,7 +649,7 @@ async function loadAlarmReplay(alarmRow) {
     }
 
     const loaded = await fetchReplayData();
-    if (!loaded || !$(state.modal).hasClass("show")) return;
+    if (!loaded || !isModalVisible()) return;
 
     setTimelineBySeconds(state.range.startSeconds);
     setPlaying(true);
@@ -632,16 +660,13 @@ function openFallReplay(alarmRow) {
 
     document.dispatchEvent(new CustomEvent("radar:pauseGenericPlayback"));
 
-    if ($(state.modal).hasClass("show")) {
+    if (isModalVisible()) {
         loadAlarmReplay(alarmRow);
         return;
     }
 
     state.pendingAlarm = alarmRow;
-    $(state.modal).modal({
-        backdrop: false,
-        show: true,
-    });
+    showFallReplayModal();
 }
 
 function bindControl(id, handler) {

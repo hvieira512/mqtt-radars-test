@@ -236,7 +236,9 @@ function process_mod($code, $rel, $module_keys) {
     $re_body = implode("\n", $reexport_code);
     if ($re_body) $re_body .= "\n";
 
-    return "{$preamble}{$re_body}{$code}{$export_reg}";
+    $moduleBody = "{$preamble}{$re_body}{$code}{$export_reg}";
+
+    return "(function(){\n{$moduleBody}\n})();\n";
 }
 
 // Build

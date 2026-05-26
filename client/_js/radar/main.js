@@ -156,7 +156,18 @@ async function preloadDashboardLayouts() {
 
 export function initModal() {
     modal = document.getElementById("radarModal");
-    if (!modal) return;
+    if (!modal) {
+        window.addEventListener(
+            "load",
+            () => {
+                if (!modal) {
+                    initModal();
+                }
+            },
+            { once: true },
+        );
+        return;
+    }
 
     liveModalController.init({
         modal,

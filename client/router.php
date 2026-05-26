@@ -9,14 +9,15 @@ $routes = [
     '/modulos/radares/_ajax/radar-data/poll.php'           => '/_ajax/radar-data/poll.php',
     '/modulos/radares/_ajax/radar-data/ingest.php'          => '/_ajax/radar-data/ingest.php',
     '/modulos/radares/_ajax/radar-data/ingest-profiler.php' => '/_ajax/radar-data/ingest-profiler.php',
-    '/modulos/radares/_ajax/radar-data/stats.php'           => '/_ajax/radar-data/stats.php',
     '/modulos/radares/_ajax/radar-data/rooms-html.php'      => '/_ajax/radar-data/rooms-html.php',
+    '/modulos/radares/_ajax/radar-data/playback.php'        => '/_ajax/radar-data/playback.php',
     '/modulos/radares/monitorizacao.php'                    => '/monitorizacao.php',
     '/modulos/radares/_ajax/layouts/current.php'            => '/_ajax/layouts/current.php',
     '/modulos/radares/_ajax/layouts/read.php'               => '/_ajax/layouts/read.php',
     '/modulos/radares/_ajax/layouts/sync.php'               => '/_ajax/layouts/sync.php',
     '/modulos/radares/_ajax/detections/device-table.php'    => '/_ajax/detections/device-table.php',
     '/modulos/radares/_ajax/detections/resolve.php'         => '/_ajax/detections/resolve.php',
+    '/modulos/radares/_ajax/sleep-reports.php'              => '/_ajax/sleep-reports.php',
 ];
 
 // Direct match
@@ -30,12 +31,13 @@ $suffixMap = [
     'radar-data-ingest.php'          => '/_ajax/radar-data/ingest.php',
     'radar-data-ingest-profiler.php' => '/_ajax/radar-data/ingest-profiler.php',
     'radar-data/poll.php'            => '/_ajax/radar-data/poll.php',
-    'radar-data/stats.php'           => '/_ajax/radar-data/stats.php',
+    'radar-data/playback.php'        => '/_ajax/radar-data/playback.php',
     'layouts/current.php'            => '/_ajax/layouts/current.php',
     'layouts/read.php'               => '/_ajax/layouts/read.php',
     'layouts/sync.php'               => '/_ajax/layouts/sync.php',
     'detections/device-table.php'    => '/_ajax/detections/device-table.php',
     'radar-data/rooms-html.php'      => '/_ajax/radar-data/rooms-html.php',
+    'sleep-reports.php'              => '/_ajax/sleep-reports.php',
 ];
 
 foreach ($suffixMap as $suffix => $target) {

@@ -283,7 +283,7 @@ $BATCH_SIZE = 20;
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="/assets/plugins/custom/datatables/i18n/pt.json" type="application/json"></script>
-    <script src="/_js/custom.js"></script>
+    <script src="/_js/custom.1.js"></script>
 
     <!-- AM Charts 5 -->
     <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
@@ -393,11 +393,11 @@ $BATCH_SIZE = 20;
         });
     </script>
 
-    <script src="/_js/radar-all.js"></script>
-
     <?php modal('radar', array('i18n' => $i18n)); ?>
     <?php modal('fall-replay', array('i18n' => $i18n)); ?>
     <?php modal('sleep-report', array('i18n' => $i18n)); ?>
+
+    <script src="/_js/radar-all.js"></script>
 
     <script>
     (function() {

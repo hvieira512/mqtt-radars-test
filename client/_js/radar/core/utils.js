@@ -209,27 +209,28 @@ export const typeConfig = {
     fall_confirmed: {
         icon: "fa-exclamation-triangle",
         badgeClass: "bg-danger text-white",
-        label: translations.i18n["queda_confirmada_label"],
+        label:
+            translations.i18n["queda_confirmada_label"] || "Queda Confirmada",
     },
     room_entry: {
         icon: "fa-sign-in",
         badgeClass: "bg-success text-white",
-        label: translations.i18n["entrou_na_sala"],
+        label: translations.i18n["entrou_na_sala"] || "Entrou na Sala",
     },
     room_exit: {
         icon: "fa-sign-out",
         badgeClass: "bg-warning text-dark",
-        label: translations.i18n["saiu_na_sala"],
+        label: translations.i18n["saiu_na_sala"] || "Saiu da Sala",
     },
     area_entry: {
         icon: "fa-arrow-right",
         badgeClass: "bg-info text-white",
-        label: translations.i18n["entrou_na_regiao"],
+        label: translations.i18n["entrou_na_regiao"] || "Entrou na Região",
     },
     area_exit: {
         icon: "fa-arrow-left",
         badgeClass: "bg-info text-white",
-        label: translations.i18n["saiu_na_regiao"],
+        label: translations.i18n["saiu_na_regiao"] || "Saiu da Região",
     },
 };
 

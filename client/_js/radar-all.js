@@ -1,6 +1,7 @@
 var __r = {};
 
 // --- _js/radar/core/utils.js ---
+(function(){
 // radar-utils.js - Shared utilities and constants for radar polling system
 
 var RADAR_AREA_COLORS = {
@@ -212,27 +213,28 @@ var typeConfig = {
     fall_confirmed: {
         icon: "fa-exclamation-triangle",
         badgeClass: "bg-danger text-white",
-        label: translations.i18n["queda_confirmada_label"],
+        label:
+            translations.i18n["queda_confirmada_label"] || "Queda Confirmada",
     },
     room_entry: {
         icon: "fa-sign-in",
         badgeClass: "bg-success text-white",
-        label: translations.i18n["entrou_na_sala"],
+        label: translations.i18n["entrou_na_sala"] || "Entrou na Sala",
     },
     room_exit: {
         icon: "fa-sign-out",
         badgeClass: "bg-warning text-dark",
-        label: translations.i18n["saiu_na_sala"],
+        label: translations.i18n["saiu_na_sala"] || "Saiu da Sala",
     },
     area_entry: {
         icon: "fa-arrow-right",
         badgeClass: "bg-info text-white",
-        label: translations.i18n["entrou_na_regiao"],
+        label: translations.i18n["entrou_na_regiao"] || "Entrou na Região",
     },
     area_exit: {
         icon: "fa-arrow-left",
         badgeClass: "bg-info text-white",
-        label: translations.i18n["saiu_na_regiao"],
+        label: translations.i18n["saiu_na_regiao"] || "Saiu da Região",
     },
 };
 
@@ -308,7 +310,10 @@ __r['m0'].calcularTempo = calcularTempo;
 __r['m0'].BED_POSTURES = BED_POSTURES;
 __r['m0'].typeConfig = typeConfig;
 
+})();
+
 // --- _js/radar/core/poll.js ---
+(function(){
 // radar-poll.js - Database polling system for radar data
 
 var pollInterval = null;
@@ -484,7 +489,10 @@ __r['m1'].onPollComplete = onPollComplete;
 __r['m1'].onOnlineDevices = onOnlineDevices;
 __r['m1'].start = start;
 
+})();
+
 // --- _js/radar/core/toast.js ---
+(function(){
 var themes = {
     success: {
         icon: "success",
@@ -535,8 +543,16 @@ var toast = function({
     ...options
 }) {
     const themeConfig = themes[theme] || themes.info;
-    const defaultTimer = (theme === 'perigo' || theme === 'danger') ? 8000 : 5000;
+    const defaultTimer = theme === "perigo" || theme === "danger" ? 8000 : 5000;
     const finalTimer = timer !== null ? timer : defaultTimer;
+
+    if (typeof Swal === "undefined" || typeof Swal.fire !== "function") {
+        const message = [title, text].filter(Boolean).join(" - ");
+        const level =
+            theme === "danger" || theme === "perigo" ? "error" : "warn";
+        console[level](`[toast:${theme}] ${message}`);
+        return;
+    }
 
     Swal.fire({
         toast: true,
@@ -570,7 +586,10 @@ __r['m2'].toast = toast;
 __r['m2'] = __r['m2'] || {};
 __r['m2'].default = toast;
 
+})();
+
 // --- _js/radar/core/grid.js ---
+(function(){
 var getAreaName = __r['m0'].getAreaName, getLayoutCache = __r['m0'].getLayoutCache, typeConfig = __r['m0'].typeConfig, calcularDuracao = __r['m0'].calcularDuracao, calcularTempo = __r['m0'].calcularTempo;
 // radar-grid.js - KT DataTables for alarms and events display
 
@@ -1216,7 +1235,10 @@ __r['m3'].loadEvents = loadEvents;
 __r['m3'].refreshAlarms = refreshAlarms;
 __r['m3'].onFallReplay = onFallReplay;
 
+})();
+
 // --- _js/radar/core/index.js ---
+(function(){
 __r['m4'] = __r['m4'] || {};
 __r['m4'].grid = __r['m3'];
 __r['m4'] = __r['m4'] || {};
@@ -1228,7 +1250,10 @@ __r['m4'].toast = __r['m2'].default;
 
 
 
+})();
+
 // --- _js/radar/replay/time.js ---
+(function(){
 var formatLocalDate = function(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -1394,7 +1419,10 @@ __r['m5'].formatClock = formatClock;
 __r['m5'].timestampToReplaySeconds = timestampToReplaySeconds;
 __r['m5'].buildReplayRangeFromAlarm = buildReplayRangeFromAlarm;
 
+})();
+
 // --- _js/radar/replay/core.js ---
+(function(){
 var buildReplayDateTime = __r['m5'].buildReplayDateTime, formatLocalDate = __r['m5'].formatLocalDate, parseMysqlDateTimeLocal = __r['m5'].parseMysqlDateTimeLocal;
 
 var TIMELINE_COLORS = {
@@ -1477,7 +1505,10 @@ __r['m6'].getReplayFrameAtSeconds = getReplayFrameAtSeconds;
 __r['m6'].getReplaySegmentAtSeconds = getReplaySegmentAtSeconds;
 __r['m6'].getReplayLayoutForSeconds = getReplayLayoutForSeconds;
 
+})();
+
 // --- _js/radar/replay/ui.js ---
+(function(){
 var renderReplayCurrentPeople = function(elementId, people = []) {
     const element = document.getElementById(elementId);
     if (!element) return;
@@ -1560,7 +1591,10 @@ __r['m7'].renderReplayCurrentPeople = renderReplayCurrentPeople;
 __r['m7'].getReplaySecondsFromClientX = getReplaySecondsFromClientX;
 __r['m7'].positionReplayTimelineOverlay = positionReplayTimelineOverlay;
 
+})();
+
 // --- _js/radar/replay/index.js ---
+(function(){
 __r['m8'] = __r['m8'] || {};
 for(var k in __r['m5']) __r['m8'][k] = __r['m5'][k];
 __r['m8'] = __r['m8'] || {};
@@ -1570,8 +1604,14 @@ for(var k in __r['m7']) __r['m8'][k] = __r['m7'][k];
 
 
 
+})();
+
 // --- _js/radar/scene/radar-scene.js ---
+(function(){
 var getAreaName = __r['m4'].getAreaName, getAreaColor = __r['m4'].getAreaColor, getPostureStyle = __r['m4'].getPostureStyle, reorderRect = __r['m4'].reorderRect, getBounds = __r['m4'].getBounds, parseRectangle = __r['m4'].parseRectangle;
+
+var FA_CANVAS_FONT_FAMILY =
+    '"Font Awesome 6 Free","Font Awesome 5 Pro","Font Awesome 5 Free"';
 
 var createTransform = function(bounds, cw, ch, padding = 30) {
     const scale = Math.min(
@@ -1632,7 +1672,7 @@ var createPersonNode = function(peopleLayer, x, y, style) {
     });
     const icon = new Konva.Text({
         text: style.icon || "\uf129",
-        fontFamily: "Font Awesome 5 Pro",
+        fontFamily: FA_CANVAS_FONT_FAMILY,
         fontStyle: "900",
         fontSize: 12,
         fill: style.color,
@@ -1852,7 +1892,7 @@ var drawRoom = function(state, rectangle, declareArea, data) {
     const radarPos = state.transformCoords([0, 0]);
     const radarIcon = new Konva.Text({
         text: "\uf8dd",
-        fontFamily: "Font Awesome 5 Pro",
+        fontFamily: FA_CANVAS_FONT_FAMILY,
         fontStyle: "900",
         fontSize: 18,
         fill: "#20c997",
@@ -2045,7 +2085,10 @@ var createRadarScene = function(options = {}) {
 __r['m9'] = __r['m9'] || {};
 __r['m9'].createRadarScene = createRadarScene;
 
+})();
+
 // --- _js/radar/scene/live-map.js ---
+(function(){
 var createRadarScene = __r['m9'].createRadarScene;
 // radar-map.js - Map rendering for radar positions using Konva.js
 
@@ -2115,7 +2158,10 @@ __r['m10'].destroy = destroy;
 __r['m10'].resize = resize;
 __r['m10'].renderPlaceholder = renderPlaceholder;
 
+})();
+
 // --- _js/radar/scene/playback-map.js ---
+(function(){
 var createRadarScene = __r['m9'].createRadarScene;
 
 var scene = createRadarScene({ showTrail: true });
@@ -2166,7 +2212,10 @@ __r['m11'].destroy = destroy;
 __r['m11'].resize = resize;
 __r['m11'].renderPlaceholder = renderPlaceholder;
 
+})();
+
 // --- _js/radar/scene/index.js ---
+(function(){
 __r['m12'] = __r['m12'] || {};
 __r['m12'].liveMap = __r['m10'];
 __r['m12'] = __r['m12'] || {};
@@ -2176,7 +2225,10 @@ __r['m12'].createRadarScene = __r['m9'].createRadarScene;
 
 
 
+})();
+
 // --- _js/radar/utils.js ---
+(function(){
 var coreRemoveLoading = __r['m0'].removeLoading, coreRenderLoading = __r['m0'].renderLoading, coreLoadScript = __r['m0'].loadScript;
 
 var animateNumber = function({
@@ -2265,7 +2317,10 @@ __r['m13'].renderLoading = renderLoading;
 __r['m13'].removeLoading = removeLoading;
 __r['m13'].loadScript = loadScript;
 
+})();
+
 // --- _js/utils.js ---
+(function(){
 __r['m14'] = __r['m14'] || {};
 __r['m14'].animateNumber = __r['m13'].animateNumber;
 __r['m14'] = __r['m14'] || {};
@@ -2281,7 +2336,10 @@ __r['m14'].renderLoading = __r['m13'].renderLoading;
 __r['m14'] = __r['m14'] || {};
 __r['m14'].restoreParentModalScrollState = __r['m13'].restoreParentModalScrollState;
 
+})();
+
 // --- _js/radar/live/info-panel.js ---
+(function(){
 var parseMysqlDateTimeLocal = __r['m5'].parseMysqlDateTimeLocal;
 
 // radar-info.js - Vitals rendering with charts
@@ -3243,7 +3301,10 @@ __r['m15'].renderPlaybackVitals = renderPlaybackVitals;
 __r['m15'].resetPlaybackVitals = resetPlaybackVitals;
 __r['m15'].reset = reset;
 
+})();
+
 // --- _js/radar/live/modal-controller.js ---
+(function(){
 var info = __r['m15'];
 var grid = __r['m4'].grid, setLayoutCache = __r['m4'].setLayoutCache;
 var map = __r['m12'].liveMap;
@@ -3575,7 +3636,10 @@ __r['m16'].resize = resize;
 __r['m16'].onPosition = onPosition;
 __r['m16'].onVitals = onVitals;
 
+})();
+
 // --- _js/radar/live/page-updater.js ---
+(function(){
 var BED_POSTURES = __r['m4'].BED_POSTURES, getLayoutCache = __r['m4'].getLayoutCache;
 
 var lastMonthFalls = 0;
@@ -4005,7 +4069,10 @@ __r['m17'].onAlarm = onAlarm;
 __r['m17'].onPollComplete = onPollComplete;
 __r['m17'].onOnlineDevices = onOnlineDevices;
 
+})();
+
 // --- _js/radar/live/index.js ---
+(function(){
 __r['m18'] = __r['m18'] || {};
 __r['m18'].infoPanel = __r['m15'];
 __r['m18'] = __r['m18'] || {};
@@ -4015,7 +4082,10 @@ __r['m18'].pageUpdater = __r['m17'];
 
 
 
+})();
+
 // --- _js/radar/playback/category-renderer.js ---
+(function(){
 var PLAYBACK_FALL_SVG_PATH =
     "M288 64C305.7 64 320 78.3 320 96L320 101.4C320 156.6 296.3 208.4 256.1 244.5L319 320L408 320C423.1 320 437.3 327.1 446.4 339.2L489.6 396.8C500.2 410.9 497.3 431 483.2 441.6C469.1 452.2 449 449.3 438.4 435.2L400 384L295.2 384L408.8 523.8C419.9 537.5 417.9 557.7 404.1 568.8C390.3 579.9 370.2 577.9 359.1 564.1L169.4 330.6C163.3 345.6 160 361.9 160 378.6L160 448C160 465.7 145.7 480 128 480C110.3 480 96 465.7 96 448L96 378.6C96 311.2 131.4 248.7 189.2 214L193.8 211.2C232.4 188 256 146.4 256 101.4L256 96C256 78.3 270.3 64 288 64zM48 152C48 121.1 73.1 96 104 96C134.9 96 160 121.1 160 152C160 182.9 134.9 208 104 208C73.1 208 48 182.9 48 152zM424 144.1C424 157.4 413.3 168.1 400 168.1C386.7 168.1 376 157.4 376 144.1L376 96.1C376 82.8 386.7 72.1 400 72.1C413.3 72.1 424 82.8 424 96.1L424 144.1zM528 296.1C514.7 296.1 504 285.4 504 272.1C504 258.8 514.7 248.1 528 248.1L576 248.1C589.3 248.1 600 258.8 600 272.1C600 285.4 589.3 296.1 576 296.1L528 296.1zM473.5 198.6C464.1 189.2 464.1 174 473.5 164.7L507.4 130.8C516.8 121.4 532 121.4 541.3 130.8C550.6 140.2 550.7 155.4 541.3 164.7L507.4 198.6C498 208 482.8 208 473.5 198.6z";
 
@@ -4164,7 +4234,10 @@ __r['m19'].getPlaybackCategoryPresentation = getPlaybackCategoryPresentation;
 __r['m19'].getPlaybackIconMarkup = getPlaybackIconMarkup;
 __r['m19'].createPlaybackCategoryPreviewMarkup = createPlaybackCategoryPreviewMarkup;
 
+})();
+
 // --- _js/radar/playback/domain.js ---
+(function(){
 var parseMysqlDateTimeLocal = __r['m8'].parseMysqlDateTimeLocal, timestampToReplaySeconds = __r['m8'].timestampToReplaySeconds;
 
 var resolvePlaybackPostureCategory = function(postureState) {
@@ -4672,7 +4745,10 @@ var normalizePlaybackResponse = function(
 __r['m20'] = __r['m20'] || {};
 __r['m20'].normalizePlaybackResponse = normalizePlaybackResponse;
 
+})();
+
 // --- _js/radar/playback/view.js ---
+(function(){
 var createPlaybackCategoryPreviewMarkup = __r['m19'].createPlaybackCategoryPreviewMarkup, getPlaybackCategoryPresentation = __r['m19'].getPlaybackCategoryPresentation;
 var formatClock = __r['m8'].formatClock, getReplayTimelineColorValue = __r['m8'].getReplayTimelineColorValue, getVisibleReplaySegments = __r['m8'].getVisibleReplaySegments, positionReplayTimelineOverlay = __r['m8'].positionReplayTimelineOverlay;
 
@@ -4833,7 +4909,10 @@ __r['m21'].renderPlaybackLoadingState = renderPlaybackLoadingState;
 __r['m21'].renderPlaybackTimelineSections = renderPlaybackTimelineSections;
 __r['m21'].updatePlaybackButtonState = updatePlaybackButtonState;
 
+})();
+
 // --- _js/radar/playback/service.js ---
+(function(){
 var normalizePlaybackResponse = __r['m20'].normalizePlaybackResponse;
 var buildReplayDateTime = __r['m8'].buildReplayDateTime, formatClock = __r['m8'].formatClock, formatLocalDate = __r['m8'].formatLocalDate;
 var renderLoading = __r['m14'].renderLoading, removeLoading = __r['m14'].removeLoading;
@@ -5024,7 +5103,10 @@ __r['m22'].initializePlaybackDatepicker = initializePlaybackDatepicker;
 __r['m22'].initializePlaybackTimepickers = initializePlaybackTimepickers;
 __r['m22'].updatePlaybackTimepickerValues = updatePlaybackTimepickerValues;
 
+})();
+
 // --- _js/radar/playback/controller.js ---
+(function(){
 var info = __r['m18'].infoPanel;
 var BED_POSTURES = __r['m4'].BED_POSTURES;
 var playbackMap = __r['m12'].playbackMap;
@@ -5884,7 +5966,10 @@ __r['m23'].resize = resize;
 __r['m23'].pause = pause;
 __r['m23'].restoreAfterSharedReplayClose = restoreAfterSharedReplayClose;
 
+})();
+
 // --- _js/radar/playback/index.js ---
+(function(){
 __r['m24'] = __r['m24'] || {};
 __r['m24'].controller = __r['m23'];
 __r['m24'] = __r['m24'] || {};
@@ -5896,7 +5981,10 @@ __r['m24'].normalizePlaybackResponse = __r['m20'].normalizePlaybackResponse;
 
 
 
+})();
+
 // --- _js/radar/fall-replay/trail.js ---
+(function(){
 var resolveTrailTargetPersonIndex = function({ alarm, frames = [], alarmSeconds }) {
     if (
         alarm?.person_index !== null &&
@@ -5966,7 +6054,10 @@ __r['m25'] = __r['m25'] || {};
 __r['m25'].resolveTrailTargetPersonIndex = resolveTrailTargetPersonIndex;
 __r['m25'].getTrailPoints = getTrailPoints;
 
+})();
+
 // --- _js/radar/fall-replay/modal-ui.js ---
+(function(){
 var setReplayModalHeader = function({ alarm, range, formatClock }) {
     const subtitleEl = document.getElementById("fall-replay-modal-subtitle");
     const titleEl = document.getElementById("fallReplayModalLabel");
@@ -6003,7 +6094,10 @@ __r['m26'].setReplayModalHeader = setReplayModalHeader;
 __r['m26'].ensureReplayBackdrop = ensureReplayBackdrop;
 __r['m26'].removeReplayBackdrop = removeReplayBackdrop;
 
+})();
+
 // --- _js/radar/fall-replay/main.js ---
+(function(){
 var grid = __r['m4'].grid;
 var createPlaybackCategoryPreviewMarkup = __r['m24'].createPlaybackCategoryPreviewMarkup, getPlaybackCategoryPresentation = __r['m24'].getPlaybackCategoryPresentation, normalizeSharedPlaybackResponse = __r['m24'].normalizePlaybackResponse;
 var getReplayFrameAtSeconds = __r['m8'].getReplayFrameAtSeconds, getReplayLayoutForSeconds = __r['m8'].getReplayLayoutForSeconds, getReplaySegmentAtSeconds = __r['m8'].getReplaySegmentAtSeconds, getReplayTimelineColorValue = __r['m8'].getReplayTimelineColorValue, getVisibleReplaySegments = __r['m8'].getVisibleReplaySegments;
@@ -6058,6 +6152,34 @@ var state = {
     previewSeconds: null,
     requestToken: 0,
 };
+
+var isModalVisible = function() {
+    return Boolean(state.modal?.classList?.contains("show"));
+}
+
+var showFallReplayModal = function() {
+    if (!state.modal) return;
+
+    if (
+        typeof bootstrap !== "undefined" &&
+        bootstrap?.Modal &&
+        typeof bootstrap.Modal.getOrCreateInstance === "function"
+    ) {
+        const instance = bootstrap.Modal.getOrCreateInstance(state.modal, {
+            backdrop: false,
+        });
+        instance.show();
+        return;
+    }
+
+    const jqModal = $(state.modal);
+    if (jqModal.length && typeof jqModal.modal === "function") {
+        jqModal.modal({
+            backdrop: false,
+            show: true,
+        });
+    }
+}
 
 var renderReplayCurrentPeople = function(elementId, people = []) {
     return renderSharedReplayCurrentPeople(elementId, people);
@@ -6608,7 +6730,7 @@ var loadAlarmReplay = async function(alarmRow) {
     }
 
     const loaded = await fetchReplayData();
-    if (!loaded || !$(state.modal).hasClass("show")) return;
+    if (!loaded || !isModalVisible()) return;
 
     setTimelineBySeconds(state.range.startSeconds);
     setPlaying(true);
@@ -6619,16 +6741,13 @@ var openFallReplay = function(alarmRow) {
 
     document.dispatchEvent(new CustomEvent("radar:pauseGenericPlayback"));
 
-    if ($(state.modal).hasClass("show")) {
+    if (isModalVisible()) {
         loadAlarmReplay(alarmRow);
         return;
     }
 
     state.pendingAlarm = alarmRow;
-    $(state.modal).modal({
-        backdrop: false,
-        show: true,
-    });
+    showFallReplayModal();
 }
 
 var bindControl = function(id, handler) {
@@ -6783,7 +6902,10 @@ var initFallReplayModal = function() {
 __r['m27'] = __r['m27'] || {};
 __r['m27'].initFallReplayModal = initFallReplayModal;
 
+})();
+
 // --- _js/radar/sleep-report/date-picker.js ---
+(function(){
 var calendarInstance = null;
 var daysWithData = [];
 var onMonthChangeCallback = null;
@@ -6853,7 +6975,10 @@ __r['m28'] = __r['m28'] || {};
 __r['m28'].initCalendar = initCalendar;
 __r['m28'].updateCalendar = updateCalendar;
 
+})();
+
 // --- _js/radar/sleep-report/suggestions.js ---
+(function(){
 var escapeHtml = (value) =>
     String(value)
         .replace(/&/g, "&amp;")
@@ -6902,7 +7027,10 @@ var updateSuggestions = (data, el, color = "primary") => {
 __r['m29'] = __r['m29'] || {};
 __r['m29'].updateSuggestions = updateSuggestions;
 
+})();
+
 // --- _js/radar/sleep-report/kpis.js ---
+(function(){
 var animateNumber = __r['m14'].animateNumber;
 
 var elements = {};
@@ -7177,7 +7305,10 @@ __r['m30'] = __r['m30'] || {};
 __r['m30'].initKPIElements = initKPIElements;
 __r['m30'].updateKPIs = updateKPIs;
 
+})();
+
 // --- _js/radar/sleep-report/charts/breathe.js ---
+(function(){
 var root, chart, xAxis, yAxis, series;
 
 var ANOMALY_TYPES = {
@@ -7387,7 +7518,10 @@ __r['m31'] = __r['m31'] || {};
 __r['m31'].initBreatheChart = initBreatheChart;
 __r['m31'].updateBreatheChart = updateBreatheChart;
 
+})();
+
 // --- _js/radar/sleep-report/charts/heart-rate.js ---
+(function(){
 var root, chart, xAxis, yAxis, series;
 
 var ANOMALY_TYPES = {
@@ -7605,7 +7739,10 @@ __r['m32'] = __r['m32'] || {};
 __r['m32'].initHeartRateChart = initHeartRateChart;
 __r['m32'].updateHeartRateChart = updateHeartRateChart;
 
+})();
+
 // --- _js/radar/sleep-report/charts/health-score.js ---
+(function(){
 var healthScoreSeries;
 var healthScoreCenterLabel;
 var healthScoreRoot;
@@ -7738,7 +7875,10 @@ __r['m33'] = __r['m33'] || {};
 __r['m33'].initHealthScoreChart = initHealthScoreChart;
 __r['m33'].updateHealthScoreChart = updateHealthScoreChart;
 
+})();
+
 // --- _js/radar/sleep-report/charts/daytime.js ---
+(function(){
 var daytimeChart = null;
 var daytimeSeries = null;
 var centerLabel = null;
@@ -7850,7 +7990,10 @@ __r['m34'] = __r['m34'] || {};
 __r['m34'].initDaytimeActivityChart = initDaytimeActivityChart;
 __r['m34'].updateDaytimeActivityChart = updateDaytimeActivityChart;
 
+})();
+
 // --- _js/radar/sleep-report/charts/sleep.js ---
+(function(){
 var SLEEP_STATUS = {
     3: { label: translations.i18n["saida_da_cama_chart"], color: 0x003366 },
     2: { label: translations.i18n["acordado"], color: 0xc0c0c0 },
@@ -8384,7 +8527,10 @@ __r['m35'] = __r['m35'] || {};
 __r['m35'].initSleepChart = initSleepChart;
 __r['m35'].updateSleepChart = updateSleepChart;
 
+})();
+
 // --- _js/radar/sleep-report/charts/timeline-sleep.js ---
+(function(){
 var root;
 var chart;
 var xAxis;
@@ -8930,7 +9076,10 @@ __r['m36'] = __r['m36'] || {};
 __r['m36'].initSleepTimelineChart = initSleepTimelineChart;
 __r['m36'].updateSleepTimeline = updateSleepTimeline;
 
+})();
+
 // --- _js/radar/sleep-report/main.js ---
+(function(){
 var Breathe = __r['m31'];
 var Daytime = __r['m34'];
 var HealthScore = __r['m33'];
@@ -9008,6 +9157,10 @@ var setReportVisibility = (hasData) => {
 };
 
 var syncPeriodPickerVisibility = (activePane = "#sleep-report-daily-pane") => {
+    if (!DOM.periodPickers || typeof DOM.periodPickers.forEach !== "function") {
+        return;
+    }
+
     const activePeriod =
         activePane === "#sleep-report-monthly-pane" ? "monthly" : "daily";
 
@@ -9294,7 +9447,10 @@ var initSleepReportModal = function() {
 __r['m37'] = __r['m37'] || {};
 __r['m37'].initSleepReportModal = initSleepReportModal;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/service.js ---
+(function(){
 var SLEEP_REPORT_URL = "/modulos/radares/_ajax/sleep-reports.php";
 
 var requestJson = async (url) => {
@@ -9340,7 +9496,10 @@ var fetchMonthlySleepReport = (uid, month) => {
 __r['m38'] = __r['m38'] || {};
 __r['m38'].fetchMonthlySleepReport = fetchMonthlySleepReport;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/helpers.js ---
+(function(){
 var DEFAULT_EMPTY_TEXT = translations.i18n["monthly_sleep_sem_dados"];
 var DEFAULT_INFO_TEXT = translations.i18n["monthly_sleep_sem_dados"];
 
@@ -10472,7 +10631,10 @@ __r['m39'].updateInfoMessage = updateInfoMessage;
 __r['m39'].updateSectionMessageAlert = updateSectionMessageAlert;
 __r['m39'].createMonthlyChartModule = createMonthlyChartModule;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/sections/activity-status.js ---
+(function(){
 var createBarChart = __r['m39'].createBarChart, createMonthlyChartModule = __r['m39'].createMonthlyChartModule, createStackedColumnChart = __r['m39'].createStackedColumnChart;
 
 var sectionKey = "activityStatus";
@@ -10519,7 +10681,10 @@ var charts = [
 __r['m40'] = __r['m40'] || {};
 __r['m40'].charts = charts;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/sections/body-movement-condition.js ---
+(function(){
 var createBarChart = __r['m39'].createBarChart, createMonthlyChartModule = __r['m39'].createMonthlyChartModule;
 
 var sectionKey = "bodyMovementCondition";
@@ -10551,7 +10716,10 @@ var charts = [
 __r['m41'] = __r['m41'] || {};
 __r['m41'].charts = charts;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/sections/breathing-rate-condition.js ---
+(function(){
 var createBarChart = __r['m39'].createBarChart, createMonthlyChartModule = __r['m39'].createMonthlyChartModule;
 
 var sectionKey = "breathingRateCondition";
@@ -10590,7 +10758,10 @@ var charts = [
 __r['m42'] = __r['m42'] || {};
 __r['m42'].charts = charts;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/sections/daily-routine.js ---
+(function(){
 var createBarChart = __r['m39'].createBarChart, createBubbleTimelineChart = __r['m39'].createBubbleTimelineChart, createMonthlyChartModule = __r['m39'].createMonthlyChartModule;
 
 var sectionKey = "dailyRoutine";
@@ -10635,7 +10806,10 @@ var charts = [
 __r['m43'] = __r['m43'] || {};
 __r['m43'].charts = charts;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/sections/getting-out-of-bed-at-night.js ---
+(function(){
 var createBarChart = __r['m39'].createBarChart, createBubbleTimelineChart = __r['m39'].createBubbleTimelineChart, createMonthlyChartModule = __r['m39'].createMonthlyChartModule;
 
 var sectionKey = "gettingOutOfBedAtNight";
@@ -10685,7 +10859,10 @@ var charts = [
 __r['m44'] = __r['m44'] || {};
 __r['m44'].charts = charts;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/sections/heart-rate-condition.js ---
+(function(){
 var createBarChart = __r['m39'].createBarChart, createMonthlyChartModule = __r['m39'].createMonthlyChartModule;
 
 var sectionKey = "heartRateCondition";
@@ -10715,7 +10892,10 @@ var charts = [
 __r['m45'] = __r['m45'] || {};
 __r['m45'].charts = charts;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/sections/sleep-condition.js ---
+(function(){
 var createBarChart = __r['m39'].createBarChart, createMonthlyChartModule = __r['m39'].createMonthlyChartModule;
 
 var sectionKey = "sleepCondition";
@@ -10784,7 +10964,10 @@ var charts = [
 __r['m46'] = __r['m46'] || {};
 __r['m46'].charts = charts;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/charts/sections/index.js ---
+(function(){
 var activityStatusCharts = __r['m40'].charts;
 var bodyMovementConditionCharts = __r['m41'].charts;
 var breathingRateConditionCharts = __r['m42'].charts;
@@ -10839,7 +11022,10 @@ var MONTHLY_SLEEP_REPORT_SECTIONS = [
 __r['m47'] = __r['m47'] || {};
 __r['m47'].MONTHLY_SLEEP_REPORT_SECTIONS = MONTHLY_SLEEP_REPORT_SECTIONS;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/main.js ---
+(function(){
 var updateSectionMessageAlert = __r['m39'].updateSectionMessageAlert;
 var MONTHLY_SLEEP_REPORT_SECTIONS = __r['m47'].MONTHLY_SLEEP_REPORT_SECTIONS;
 var fetchMonthlySleepReport = __r['m38'].fetchMonthlySleepReport;
@@ -11059,11 +11245,17 @@ var initMonthlySleepReportModal = function() {
 __r['m48'] = __r['m48'] || {};
 __r['m48'].initMonthlySleepReportModal = initMonthlySleepReportModal;
 
+})();
+
 // --- _js/radar/monthly-sleep-report/index.js ---
+(function(){
 __r['m49'] = __r['m49'] || {};
 __r['m49'].initMonthlySleepReportModal = __r['m48'].initMonthlySleepReportModal;
 
+})();
+
 // --- _js/radar/main.js ---
+(function(){
 var grid = __r['m4'].grid, poll = __r['m4'].poll, setLayoutCache = __r['m4'].setLayoutCache;
 var liveModalController = __r['m18'].modalController, livePageUpdater = __r['m18'].pageUpdater;
 var playbackController = __r['m24'].controller;
@@ -11224,7 +11416,18 @@ var preloadDashboardLayouts = async function() {
 
 var initModal = function() {
     modal = document.getElementById("radarModal");
-    if (!modal) return;
+    if (!modal) {
+        window.addEventListener(
+            "load",
+            () => {
+                if (!modal) {
+                    initModal();
+                }
+            },
+            { once: true },
+        );
+        return;
+    }
 
     liveModalController.init({
         modal,
@@ -11269,6 +11472,8 @@ var init = async function() {
 __r['m50'] = __r['m50'] || {};
 __r['m50'].initModal = initModal;
 __r['m50'].init = init;
+
+})();
 
 // --- Boot ---
 (function() { var _init = __r['m50'].init || __r['m50'].default; if (typeof _init === 'function') _init(); })();

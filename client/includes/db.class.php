@@ -82,6 +82,16 @@ class DB
         return $row ? $row[0] : null;
     }
 
+    public function fetchRow($result): ?array
+    {
+        if (!$result instanceof mysqli_result) {
+            return null;
+        }
+
+        $row = mysqli_fetch_assoc($result);
+        return $row ?: null;
+    }
+
     public function autoExecute(string $table, array $fields, string $type, ?string $where = null)
     {
         $type = strtoupper($type);
@@ -125,6 +135,11 @@ class DB
     public function getLastInsertedId(): int
     {
         return (int)$this->_last_inserted_id;
+    }
+
+    public function affectedRows(): int
+    {
+        return (int)mysqli_affected_rows($this->_conn);
     }
 
     public function getConnection()

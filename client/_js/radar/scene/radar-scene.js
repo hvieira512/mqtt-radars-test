@@ -7,6 +7,9 @@ import {
     parseRectangle,
 } from "../core/index.js";
 
+const FA_CANVAS_FONT_FAMILY =
+    '"Font Awesome 6 Free","Font Awesome 5 Pro","Font Awesome 5 Free"';
+
 function createTransform(bounds, cw, ch, padding = 30) {
     const scale = Math.min(
         (cw - 2 * padding) / bounds.width,
@@ -66,7 +69,7 @@ function createPersonNode(peopleLayer, x, y, style) {
     });
     const icon = new Konva.Text({
         text: style.icon || "\uf129",
-        fontFamily: "Font Awesome 5 Pro",
+        fontFamily: FA_CANVAS_FONT_FAMILY,
         fontStyle: "900",
         fontSize: 12,
         fill: style.color,
@@ -286,7 +289,7 @@ function drawRoom(state, rectangle, declareArea, data) {
     const radarPos = state.transformCoords([0, 0]);
     const radarIcon = new Konva.Text({
         text: "\uf8dd",
-        fontFamily: "Font Awesome 5 Pro",
+        fontFamily: FA_CANVAS_FONT_FAMILY,
         fontStyle: "900",
         fontSize: 18,
         fill: "#20c997",
